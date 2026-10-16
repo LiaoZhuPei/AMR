@@ -1,0 +1,66 @@
+/CBRS
+  介绍：雷达数据集+检测模型
+  问题：缺失雷达测试数据集
+
+/IQ_Slices_Data
+/IQ_Slices_Data_2
+  介绍：切片后的IQ复数数据集
+
+/Modulation
+  介绍：256QAM的simulink仿真程序
+
+/P4P
+  介绍：大疆P4 Pro的simulink仿真程序（未完成）
+
+/pretrained-models
+  介绍：yolox的预训练模型
+
+/spectrogram
+  介绍：不同参数的时频图（示例信号）
+
+/Tea
+/Teb
+  介绍：不同时间范围下划分的大疆P4P信号片段
+
+/Tec
+  介绍：除第一个信号片段，后续可用信号片段时间范围均为0.7s
+
+/UAV
+  介绍:Yolox + Tec训后后保存的模型权重
+
+/Unuse
+  介绍：暂不使用的文件
+
+/waitA
+/waitB
+/waitC
+/waitD
+/waitE
+  介绍：不同时间范围下划分的信号片段
+
+
+/unuse/AAA.mat
+/unuse/BBB.mat
+  介绍：实验保存的网络模型
+
+bin_to_complex.m
+  介绍：将.bin文件转化为.mat格式的复数IQ文件
+
+CBRS.m
+  介绍：下载RPLFMSimulatedRadarDataset数据集
+
+Evaluate_Object_Detetor.m
+  介绍：评价训练好的模型在测试 数据集 上的表现
+
+image_spe000.png - image_spe009.png
+  介绍：相同信号修改参数后用于对比测试的不同时频图
+
+iq_to_mat.m
+  介绍：将.iq信号文件转化为.mat文件
+
+test004.m
+  介绍：生成单个.mat信号文件（与标注器相同）的时频图
+test005.m
+  介绍：采用训练好的权重进行单样本推理
+test006.m
+  介绍：自动标注（基于局部自适应灰度阈值法）

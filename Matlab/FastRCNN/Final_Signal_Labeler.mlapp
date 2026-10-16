@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AppContainer xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mlapp="http://www.mathworks.com/ MatlabAppContainer" version="R2021b" >
+<Content>
+<App auto-ГОСТ="false" class-name="Final_Signal_Labeler" name="Final_Signal_Labeler.mlapp" >
+<Component type="matlab.apps.AppBase" name="app" />
+<Code>
+<![CDATA[classdef Final_Signal_Labeler < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure              matlab.ui.Figure
+        GridLayout            matlab.ui.container.GridLayout
+        OverviewAxes          matlab.ui.control.UIAxes
+        ZoomAxes              matlab.ui.control.UIAxes
+        ControlPanel          matlab.ui.container.Panel
+        LoadButton            matlab.ui.control.Button
+        SaveButton            matlab.ui.control.Button
+        NFFTSliderLabel       matlab.ui.control.Label
+        NFFTSlider            matlab.ui.control.Slider
+        StatusLabel           matlab.ui.control.Label
+    end
+
+    properties (Access = private)
+        FilePath              string
+        SampleRate = 2.048e6;
+        DataType = 'int16';
+        AnnotationFile = 'annotations_final_app.csv';
+        ClassID = 0;
+        FullDuration = 0;
+        MemMap                
+        AnnotationROI
+    end
+
+    methods (Access = private)
+
+        function startupFcn(app)
+            app.StatusLabel.Text = '请点击 "加载.bin文件" 开始...';
+        end
+
+        function LoadButtonPushed(app, event)
+            [file, path] = uigetfile('*.bin', '请选择一个 .bin 信号文件');
+            if isequal(file, 0), return; end
+            app.FilePath = fullfile(path, file);
+            app.StatusLabel.Text = '正在生成概览图，请稍候...';
+            drawnow;
+
+            try
+                app.MemMap = memmapfile(app.FilePath, 'Format', {app.DataType, [1, Inf], 'signal'});
+                num_samples = size(app.MemMap.Data.signal, 2);
+                app.FullDuration = num_samples / app.SampleRate;
+                
+                decimation_factor = 200;
+                overview_data_int = app.MemMap.Data.signal(1, 1:decimation_factor:end);
+                overview_data = single(overview_data_int) / 32768.0;
+                
+                [s, f, t] = spectrogram(overview_data, kaiser(256,5), 128, 256, app.SampleRate/decimation_factor, 'yaxis');
+                imagesc(app.OverviewAxes, t, f, 10*log10(abs(s)));
+                set(app.OverviewAxes, 'YDir', 'normal');
+                colorbar(app.OverviewAxes);
+                title(app.OverviewAxes, '概览图 (低分辨率)');
+                xlabel(app.OverviewAxes, '时间 (s)');
+                ylabel(app.OverviewAxes, '频率 (Hz)');
+                
+                app.OverviewAxes.ButtonDownFcn = @(~,~) app.zoom_on_click();
+                
+                app.StatusLabel.Text = sprintf('加载成功! 总时长: %.2fs. 请在概览图上点击选择缩放区域。', app.FullDuration);
+            catch ME
+                uialert(app.UIFigure, ['无法加载文件: ' ME.message], '加载错误');
+                app.StatusLabel.Text = '加载失败，请检查文件格式。';
+            end
+        end
+        
+        function zoom_on_click(app)
+            pt = app.OverviewAxes.CurrentPoint;
+            t_center = pt(1,1);
+            zoom_duration = min(app.FullDuration * 0.05, 10);
+            t_start = max(0, t_center - zoom_duration/2);
+            t_end = min(app.FullDuration, t_center + zoom_duration/2);
+            
+            app.update_zoom_plot(t_start, t_end);
+        end
+
+        function update_zoom_plot(app, t_start, t_end)
+            app.StatusLabel.Text = '正在从硬盘读取并渲染高清图...';
+            drawnow;
+            
+            start_sample = round(t_start * app.SampleRate) + 1;
+            end_sample = round(t_end * app.SampleRate) + 1;
+            
+            chunk_int = app.MemMap.Data.signal(:, start_sample:end_sample);
+            chunk_real = single(chunk_int) / 32768.0;
+            
+            win_size = app.NFFTSlider.Value;
+            overlap = round(win_size * 0.5);
+
+            cla(app.ZoomAxes);
+            [s, f, t] = spectrogram(chunk_real, kaiser(win_size, 5), overlap, win_size, app.SampleRate, 'yaxis');
+            imagesc(app.ZoomAxes, t, f, 10*log10(abs(s)));
+            set(app.ZoomAxes, 'YDir', 'normal');
+            colorbar(app.ZoomAxes);
+            
+            xlim(app.ZoomAxes, [0, t(end)]);
+            ticks = get(app.ZoomAxes, 'XTick');
+            set(app.ZoomAxes, 'XTickLabel', arrayfun(@(xt) sprintf('%.2f', xt + t_start), ticks, 'UniformOutput', false));
+            
+            title(app.ZoomAxes, sprintf('缩放视图 | 时间: %.2fs - %.2fs', t_start, t_end));
+            xlabel(app.ZoomAxes, '时间 (s)');
+            ylabel(app.ZoomAxes, '频率 (Hz)');
+            
+            if ~isempty(app.AnnotationROI) && isvalid(app.AnnotationROI), delete(app.AnnotationROI); end
+            app.AnnotationROI = drawrectangle(app.ZoomAxes, 'Color', 'y');
+            app.StatusLabel.Text = '高清图渲染完毕。请绘制或调整矩形框进行标注。';
+        end
+
+        function NFFTSliderValueChanged(app, event)
+             if ~isempty(app.ZoomAxes.Children)
+                current_xlim_relative = xlim(app.ZoomAxes);
+                try
+                   t_offset_str = app.ZoomAxes.XTickLabel{1};
+                   t_offset = str2double(regexp(t_offset_str, '[0-9\\.]*', 'match', 'once'));
+                   t_start = current_xlim_relative(1) + t_offset;
+                   t_end = current_xlim_relative(2) + t_offset;
+                   app.update_zoom_plot(t_start, t_end);
+                catch
+                end
+             end
+        end
+
+        function SaveButtonPushed(app, event)
+            if isempty(app.AnnotationROI) || ~isvalid(app.AnnotationROI)
+                app.StatusLabel.Text = '错误：请先绘制一个标注框。';
+                return;
+            end
+            
+            pos_relative = app.AnnotationROI.Position;
+            t_offset = 0;
+            try
+               t_offset_str = app.ZoomAxes.XTickLabel{1};
+               t_offset = str2double(regexp(t_offset_str, '[0-9\\.]*', 'match', 'once'));
+            catch
+            end
+            
+            pos_absolute = pos_relative;
+            pos_absolute(1) = pos_relative(1) + t_offset;
+            
+            zoom_xlim_absolute = xlim(app.ZoomAxes) + t_offset;
+            zoom_ylim = ylim(app.ZoomAxes);
+            
+            x_center = pos_absolute(1) + pos_absolute(3)/2;
+            y_center = pos_absolute(2) + pos_absolute(4)/2;
+            
+            x_center_norm = (x_center - zoom_xlim_absolute(1)) / (zoom_xlim_absolute(2) - zoom_xlim_absolute(1));
+            y_center_norm = (y_center - zoom_ylim(1)) / (zoom_ylim(2) - zoom_ylim(1));
+            width_norm = pos_absolute(3) / (zoom_xlim_absolute(2) - zoom_xlim_absolute(1));
+            height_norm = pos_absolute(4) / (zoom_ylim(2) - zoom_ylim(1));
+            
+            [~, filename, ~] = fileparts(app.FilePath);
+            annotation_line = sprintf('%s.bin,%d,%.6f,%.6f,%.6f,%.6f\n', ...
+                                      filename, app.ClassID, x_center_norm, y_center_norm, width_norm, height_norm);
+            
+            try
+                fileID = fopen(app.AnnotationFile, 'a');
+                fprintf(fileID, annotation_line);
+                fclose(fileID);
+                app.StatusLabel.Text = sprintf('成功! 标注已保存至 %s. 您可以继续在概览图上点击。', app.AnnotationFile);
+            catch ME
+                app.StatusLabel.Text = ['错误：无法写入文件: ' ME.message];
+            end
+        end
+    end
+
+    methods (Access = private)
+
+        function createComponents(app)
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.Position = [100 100 1000 700];
+            app.UIFigure.Name = '终极信号标注工具';
+
+            app.GridLayout = uigridlayout(app.UIFigure);
+            app.GridLayout.ColumnWidth = {'1x', 150};
+            app.GridLayout.RowHeight = {'1x', '3x', 30};
+
+            app.OverviewAxes = uiaxes(app.GridLayout);
+            app.OverviewAxes.Layout.Row = 1; app.OverviewAxes.Layout.Column = 1;
+
+            app.ZoomAxes = uiaxes(app.GridLayout);
+            app.ZoomAxes.Layout.Row = 2; app.ZoomAxes.Layout.Column = 1;
+
+            app.ControlPanel = uipanel(app.GridLayout);
+            app.ControlPanel.Title = '控制面板';
+            app.ControlPanel.Layout.Row = [1 3]; app.ControlPanel.Layout.Column = 2;
+            
+            app.LoadButton = uibutton(app.ControlPanel, 'push', 'Text', '加载 .bin 文件', 'Position', [25 350 100 30], 'ButtonPushedFcn', createCallbackFcn(app, @LoadButtonPushed, true));
+
+            app.SaveButton = uibutton(app.ControlPanel, 'push', 'Text', '保存当前标注', 'Position', [25 300 100 30], 'ButtonPushedFcn', createCallbackFcn(app, @SaveButtonPushed, true));
+
+            app.NFFTSliderLabel = uilabel(app.ControlPanel, 'Text', 'NFFT (清晰度)', 'Position', [25 250 100 22]);
+
+            app.NFFTSlider = uislider(app.ControlPanel, 'Limits', [256 8192], 'Value', 1024, 'MajorTicks', [256, 1024, 4096, 8192], 'Position', [25 220 100 3], 'ValueChangedFcn', createCallbackFcn(app, @NFFTSliderValueChanged, true));
+
+            app.StatusLabel = uilabel(app.GridLayout, 'Text', '', 'HorizontalAlignment', 'center', 'FontSize', 14);
+            app.StatusLabel.Layout.Row = 3; app.StatusLabel.Layout.Column = 1;
+
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    methods (Access = public)
+        function app = Final_Signal_Labeler()
+            createComponents(app);
+            registerApp(app, app.UIFigure);
+            runStartupFcn(app, @startupFcn);
+            if nargout == 0, clear app; end
+        end
+
+        function delete(app)
+            delete(app.UIFigure);
+        end
+    end
+end
+]]>
+</Code>
+<InitialState />
+</App>
+</Content>
+</AppContainer>

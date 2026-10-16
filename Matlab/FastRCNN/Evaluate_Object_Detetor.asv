@@ -1,0 +1,42 @@
+% 替换为训练好的文件，
+% 如E:\M_Project\FasteRCNNdata\UAV\UAVDetectionNetwork\trainedUAVDetectorYoloX2025-12-04-15-34-51.mat
+modelFolder = "E:\M_Project\FasteRCNNdata\UAV";
+load(fullfile(modelFolder,"UAVDetectionNetwork","trainedRadarDetectorMAP30.mat")); 
+
+% load test data
+load(fullfile(datasetFolder,"testdata","RPFMradardataTest.mat"));
+load(fullfile(datasetFolder,"testdata","RPFMradardataTestLabels.mat"));
+load(fullfile(datasetFolder,"testdata","RPFMradardataTestmetaData.mat")); % 待定是否需要添加
+
+% 辅助函数createTestsetDS会重复之前针对训练集和验证集显式执行的步骤，
+% 并返回一个CombinedDatastore用于评估目标识别器性能的集合。
+% 矩形脉冲波形边界框的数量在集合中返回numPW，
+% 线性调频波形边界框的数量在集合中返回numFM。
+[yolotestDS,numRP,numFM] = createTestsetDS(RPFMradardataTest, ... 
+    RPFMradardataTestLabels,RPFMradardataTestmetaData,window=rectwin(16)); 
+
+%evaluateObjectDetection用于测量常用指标，例如平均精度和精确率-召回率，
+% 并可选择指定计算这些指标的重叠阈值。使用目标检测函数在测试数据集上运行检测器detect。
+% 为了评估检测器在所有召回率值范围内的精度，请将检测阈值设置为较低的值，以便尽可能多地检测到目标。
+detectionThreshold = 0.001; 
+results = detect(trainedRadarDetectorMAP30,yolotestDS, ... 
+    MiniBatchSize=8,Threshold=detectionThreshold);
+
+% 使用该函数计算指定重叠阈值下的目标检测指标evaluateObjectDetection。
+% 重叠阈值定义了预测边界框与真实边界框之间所需的重叠比例，只有当预测边界框与真实边界框重叠达到一定比例时，
+% 预测边界框才被视为真正例。例如，重叠阈值为 0.5 时，50% 的重叠率被视为正确匹配；而重叠阈值为 0.9 时则更为严格，
+% 要求预测边界框几乎与真实边界框完全重合
+overlapThresholds = [0.3 0.4 0.5 0.75 0.9]; 
+metrics = evaluateObjectDetection(results,yolotestDS,overlapThresholds);
+
+%使用 summarize 对象函数，在整体数据集级别和单个类别级别评估汇总检测器的性能。
+[datasetSummary,classSummary] = summarize(metrics);
+
+%为了选择留出测试的最佳置信度阈值，需要使用每个类别的精确率和召回率来确定最佳 F1 分数与目标置信度的函数关系。
+% 将目标置信度阈值定义为两个类别中 F1 分数达到最大值时的值。F1 分数是精确率和召回率的调和平均值
+[precisionRP,recallRP,scoresRP] = precisionRecall(metrics,ClassName= "RP" ); 
+[precisionFM,recallFM,scoresFM] = precisionRecall(metrics,ClassName= "RP" ); 
+f1scoresRP = cellfun(@harmmean,cellfun(@(x,y)cat(1,x,y),precisionRP,recallRP,uniform=false),uniform=false); 
+f1scoresRP = cell2mat(f1scoresRP')'; 
+f1scoresFM = cellfun(@harmmean,cellfun(@(x,y)cat(1,x,y),precisionFM,recallFM,uniform=false),uniform=false); 
+f1scoresFM = cell2mat(f1scoresFM')';

@@ -1,0 +1,202 @@
+clear; clc; close all;
+
+modelFolder = "E:\M_Project\FasteRCNNdata\UAV";
+load(fullfile(modelFolder,"UAVDetectionNetwork","trainedUAVDetectorYoloX2025-12-04-15-34-51.mat")); 
+
+% detector = yoloxObjectDetector(UAVdetector);
+detector = UAVdetector;
+
+disp(detector)
+
+
+%% 1. 加载数据
+matFileName = 'E:\M_Project\FasteRCNNdata\Tec\20170515_PartG_4.mat'; % 请替换为你的文件名
+if ~exist(matFileName, 'file')
+    error('找不到文件: %s', matFileName);
+end
+load(matFileName);
+
+% 自动寻找变量 x
+vars = who;
+vars = vars(~strcmp(vars, 'matFileName'));
+x = eval(vars{1}); 
+
+% 假设采样率
+fs = 1000000; 
+
+%% 2. 设置参数 (模拟系统默认行为)
+options = struct();
+options.Leakage = 0.5;
+options.UseDecibels = true;
+options.MinimumThresholdMode = "auto";
+options.MinimumThreshold = []; 
+
+% 目标格式
+mapFormat = "image";
+mapSize = [256, 256]; 
+channel = 1;
+
+%% 3. 执行核心转化流程
+% 这一步严格按照 createDatastores -> pspectrumSpectrogramTransform 的顺序执行
+
+% A. 获取信号
+if ismatrix(x) && size(x,2) > 1 && size(x,1) == 1, x = x'; end
+if ismatrix(x) && size(x,2) > 1, x = x(:, channel); end
+
+% B. 计算频谱 (pspectrum)
+[pxx, f, t] = pspectrum(x, fs, 'spectrogram', 'Leakage', options.Leakage);
+pxx = double(pxx);
+
+% C. 转化为 dB (模拟 formatForDecibels)
+% 必须先做这一步，因为 formatForImage 依赖处理过的数据
+if options.UseDecibels
+    % 防止 log(0)
+    pxx = 10 * log10(pxx + eps);
+end
+
+% 处理阈值 (为了给 formatForImage 传参)
+minThreshold = [];
+if options.MinimumThresholdMode == "specify"
+    minThreshold = options.MinimumThreshold;
+elseif options.MinimumThresholdMode == "auto"
+    minThreshold = min(pxx(:));
+end
+
+% D. 【核心】调用你提供的 formatForImage
+% 注意：这里直接调用下面的本地函数
+imgData = local_formatForImage(pxx, mapFormat, mapSize, minThreshold, options.UseDecibels);
+
+%% 4. 显示结果
+figure;
+% 使用 image 显示，保持原始像素风格
+image(imgData);
+axis on;
+title('最终复刻版 (基于官方 formatForImage)');
+xlabel('时间轴 (Time)');
+ylabel('频率轴 (Frequency)');
+
+%% ============================================================
+%  【用户提供的官方源码】 formatForImage
+%   我将其封装为本地函数，不做任何逻辑修改
+%  ============================================================
+function map = local_formatForImage(map,mapFormat,mapSize,minThreshold,useDecibels)
+    %FORMATFORIMAGE Optionally resize a time-frequency map or optionally convert it into an image
+    %
+    %   For internal use only. It may be removed.
+    
+    %   Copyright 2024 The MathWorks, Inc.
+    
+    % Determine the colorscale limits
+    if useDecibels
+        minValue = minThreshold;
+    else
+        % 修正：原代码可能是为了处理线性输入的阈值转换
+        % 确保 minValue 不会出错
+        if isempty(minThreshold)
+             minValue = min(map(:));
+        else
+             minValue = 10^(minThreshold/10);
+        end
+    end
+    maxValue = max(map(:));
+    
+    % Perform optional image resize
+    if ~isempty(mapSize)
+        % 【关键点】原版使用的是 "nearest" (最近邻插值)
+        map = imresize(map,[mapSize(1),mapSize(2)],"nearest");
+    end
+    
+    % Perform optional conversion to uint8 image
+    if mapFormat == "image"
+        % Create parula color scale
+        nColors = double(intmax("uint8")) + 1; % 256
+        cmm = parula(nColors);
+        cmm = cmm .* (nColors - 1); % Scale to 0-255
+    
+        % Calculate linear scale to convert from time-frequency map to [0,255]
+        % uint8 range
+        % 这里做了防除以零保护 (尽管原版可能没写，但为了稳健最好加上)
+        denom = maxValue - minValue;
+        if denom == 0, denom = 1; end
+        
+        m = (nColors - 1) / denom;
+        b = 1 - minValue * m;
+    
+        % Convert time-frequency scale into uint8 scale
+        normalizedMap = m .* map + b;
+        height = size(map,1);
+        width = size(map,2);
+        idx = ceil(normalizedMap);
+        
+        % 边界保护 (防止浮点误差导致越界)
+        idx(idx > nColors) = nColors;
+        idx(idx < 1) = 1; 
+    
+        % Fill R,G,B pages with their respective colors
+        map = zeros(height, width, 3, 'uint8');
+        map(:,:,1) = floor(reshape(cmm(idx, 1),[height, width]));
+        map(:,:,2) = floor(reshape(cmm(idx, 2),[height, width]));
+        map(:,:,3) = floor(reshape(cmm(idx, 3),[height, width]));
+    end
+
+    % 1. 获取信号
+    if ismatrix(x) && size(x,2) > 1 && size(x,1) == 1
+        x = x'; 
+    end
+    if ismatrix(x) && size(x,2) > 1
+        x = x(:, channel); 
+    end
+    
+    fs = [];
+    if isfield(infoIn,'SampleRate'), fs = infoIn.SampleRate; end
+    if isempty(fs), error('必须提供采样率 fs'); end
+
+    % 2. 计算频谱
+    [pxx, f, t] = pspectrum(x, fs, 'spectrogram', 'Leakage', options.Leakage);
+    pxx = double(pxx);
+
+    % 3. dB 转换
+    timeFrequencyMap = pxx;
+    if options.UseDecibels
+        timeFrequencyMap = 10 * log10(timeFrequencyMap + eps);
+    end
+    
+    minThreshold = [];
+    if options.MinimumThresholdMode == "auto"
+        minThreshold = min(timeFrequencyMap(:));
+    end
+
+    % 4. 调整尺寸并生成图像 (Resize & Create Image)
+    if mapFormat == "image"
+        % A. Resize
+        resizedMap = imresize(timeFrequencyMap, mapSize, 'bilinear');
+        
+        % B. 归一化
+        maxVal = max(resizedMap(:));
+        if isempty(minThreshold), minThreshold = min(resizedMap(:)); end
+        
+        rangeVal = maxVal - minThreshold;
+        if rangeVal == 0
+            normMap = zeros(size(resizedMap));
+        else
+            normMap = (resizedMap - minThreshold) / rangeVal;
+        end
+        normMap(normMap < 0) = 0;
+        normMap(normMap > 1) = 1;
+        
+        % C. 转为 RGB (关键修改！)
+        % 原版 MATLAB 新版本默认使用 parula，之前我写的是 jet
+        cmap = parula(256); 
+        
+        idx = round(normMap * 255) + 1;
+        timeFrequencyMap = ind2rgb(idx, cmap);
+        
+        % 转为 uint8
+        timeFrequencyMap = im2uint8(timeFrequencyMap);
+    end
+
+    % 5. 输出信息
+    infoOut = infoIn;
+    infoOut.Frequencies = f;
+    infoOut.Time = t;
+end

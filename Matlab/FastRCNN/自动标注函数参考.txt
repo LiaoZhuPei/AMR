@@ -1,0 +1,13 @@
+% x: 原始时域信号
+% t: 时间向量
+% tf: App 算好的频谱图矩阵 (Spectrogram Power Estimate) -> 这就是你算法的输入
+% f: 频率向量
+% timeInfo: 频谱图的时间轴信息
+function [labelVals, labelLocs] = mySpectrogramLabeler(x, t, tf, f, timeInfo)
+    % 在这里写你的图像处理算法
+    % 利用 tf (矩阵) 计算出 ROI
+    
+    % 输出格式：[StartTime, StartFrequency, Duration, Bandwidth]
+    labelLocs = [0.5, 1000, 0.2, 500]; 
+    labelVals = true; % 或者类别名称
+end

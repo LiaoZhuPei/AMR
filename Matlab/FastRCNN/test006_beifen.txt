@@ -1,0 +1,24 @@
+clear; clc; close all;
+
+datafolder = "E:\M_Project\FasteRCNNdata\Tec" ; 
+filename = "20170515_PartG_100.mat" ; 
+
+filepath = fullfile(datafolder, filename); 
+file = load(filepath); 
+sig = file.signal'; 
+fs = 1e6; 
+win = hann(512); 
+conf_ThreshDB = -10;
+figure(Position=[0 0 1000 300]) 
+[S, f, t] = stft(sig, fs, FrequencyRange= "centered" , Window=win); 
+Smag = abs(S); 
+Smag_dB = mag2db(Smag);
+%histogram(Smag(:));
+stft(sig, fs, FrequencyRange= "centered" , Window=win) 
+
+set(gca, YDir= "reverse" )
+
+ROITableThresh = helperFindSpecROI(Smag,f,t,Method= "Adaptthresh"); 
+
+figure(Position=[0 0 1000 300]) 
+helperPlotROIs(Smag,f,t,ROITableThresh)
