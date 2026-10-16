@@ -1,0 +1,401 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+#ifdef _WIN32
+#define NOMINMAX
+#include <Windows.h>
+#endif
+
+// ORT 的头文件 (这两个还是必须 C++ 的, 因为 ORT 的 API 就是 C++)
+#include "onnxruntime_cxx_api.h"
+#include "cpu_provider_factory.h"
+
+// ===================================================================
+// 常量 (全部用 #define, 最简单)
+// ===================================================================
+#define SAMPLES_PER_IMAGE  10240
+#define IMAGE_SIZE         64
+#define CHANNELS           3
+#define TENSOR_SIZE        (CHANNELS * IMAGE_SIZE * IMAGE_SIZE)  /* 12288 */
+#define MAX_LABELS         32
+#define MAX_LABEL_LEN      64
+#define PI_F               3.14159265358979323846f
+#define INT16_SCALE        (1.0f / 32767.0f)
+
+// ===================================================================
+// 全局标签表 (简单的 char 二维数组)
+// ===================================================================
+static char  g_labels[MAX_LABELS][MAX_LABEL_LEN];
+static int   g_num_labels = 0;
+
+static int load_labels(const char* path) {
+    FILE* fp = fopen(path, "r");
+    if (!fp) {
+        fprintf(stderr, "错误: 无法打开标签文件: %s\n", path);
+        return -1;
+    }
+    char line[256];
+    g_num_labels = 0;
+    while (fgets(line, sizeof(line), fp) && g_num_labels < MAX_LABELS) {
+        int len = (int)strlen(line);
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
+            line[--len] = '\0';
+        if (len > 0) {
+            strncpy(g_labels[g_num_labels], line, MAX_LABEL_LEN - 1);
+            g_labels[g_num_labels][MAX_LABEL_LEN - 1] = '\0';
+            g_num_labels++;
+        }
+    }
+    fclose(fp);
+    return g_num_labels;
+}
+
+// ===================================================================
+// 读取 IQ 文件 → 输出 float* sig_i, float* sig_q
+// raw_data 在函数内部分配并释放, 不泄漏到外面
+// ===================================================================
+static int load_iq_file(
+    const char* path,
+    float** out_i,    /* 输出: I 通道 */
+    float** out_q,    /* 输出: Q 通道 */
+    size_t* out_count /* 输出: 采样点数 */
+) {
+    FILE* fp = fopen(path, "rb");
+    if (!fp) {
+        fprintf(stderr, "无法打开 IQ 文件: %s\n", path);
+        return -1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    size_t num_int16 = (size_t)file_size / sizeof(int16_t);
+    num_int16 -= (num_int16 % 2);   /* 确保偶数 */
+    size_t num_points = num_int16 / 2;
+
+    /* 分配 raw 缓冲区 */
+    int16_t* raw = (int16_t*)malloc(num_int16 * sizeof(int16_t));
+    if (!raw) { fclose(fp); return -1; }
+
+    fread(raw, sizeof(int16_t), num_int16, fp);
+    fclose(fp);
+
+    /* 分配输出缓冲区 */
+    *out_i = (float*)malloc(num_points * sizeof(float));
+    *out_q = (float*)malloc(num_points * sizeof(float));
+    if (!*out_i || !*out_q) {
+        free(raw); free(*out_i); free(*out_q);
+        return -1;
+    }
+
+    /* 转换: int16 → float, 同时释放 raw */
+    for (size_t k = 0; k < num_points; k++) {
+        (*out_i)[k] = (float)raw[2 * k] * INT16_SCALE;
+        (*out_q)[k] = (float)raw[2 * k + 1] * INT16_SCALE;
+    }
+
+    free(raw);  /* raw 立刻释放, 不等 main() 结束 */
+    *out_count = num_points;
+    return 0;
+}
+
+// ===================================================================
+// 填充一个直方图通道 (栈上 hist 数组, 不用 vector)
+// ===================================================================
+static void fill_hist_channel(
+    const float* x_data, const float* y_data, size_t count,
+    float x_min, float x_max, float y_min, float y_max,
+    float* output, int channel)
+{
+    const int bins = IMAGE_SIZE;    /* 64 */
+    float hist[IMAGE_SIZE * IMAGE_SIZE];  /* 16KB 栈上 */
+    memset(hist, 0, sizeof(hist));
+
+    float x_range = x_max - x_min;
+    float y_range = y_max - y_min;
+
+    /* 1. 统计 */
+    for (size_t i = 0; i < count; i++) {
+        float x = x_data[i];
+        float y = y_data[i];
+        if (x < x_min) x = x_min;
+        if (x > x_max) x = x_max;
+        if (y < y_min) y = y_min;
+        if (y > y_max) y = y_max;
+
+        int xi = (int)((x - x_min) / x_range * (bins - 1));
+        int yi = (int)((y - y_min) / y_range * (bins - 1));
+        if (xi >= bins) xi = bins - 1;
+        if (yi >= bins) yi = bins - 1;
+
+        hist[yi * bins + xi] += 1.0f;
+    }
+
+    /* 2. log1p + 找最大值 */
+    float max_val = 0.0f;
+    for (int i = 0; i < bins * bins; i++) {
+        hist[i] = log1pf(hist[i]);
+        if (hist[i] > max_val) max_val = hist[i];
+    }
+    if (max_val < 1e-6f) max_val = 1.0f;
+
+    /* 3. 归一化 + 翻转Y轴 写入输出 */
+    float inv_max = 1.0f / max_val;
+    int offset = channel * bins * bins;
+
+    for (int y = 0; y < bins; y++) {
+        int dst_row = bins - 1 - y;
+        for (int x = 0; x < bins; x++) {
+            output[offset + dst_row * bins + x] = hist[y * bins + x] * inv_max;
+        }
+    }
+}
+
+// ===================================================================
+// 预处理一个切片: float* sig_i + float* sig_q → float tensor[TENSOR_SIZE]
+// 参数全是指针+长度, 不用 vector, 不用 complex
+// ===================================================================
+static int preprocess_slice(
+    const float* sig_i, const float* sig_q, size_t N,
+    float* output)   /* output 大小 = TENSOR_SIZE */
+{
+    if (N < 100) return 0;  /* 返回 0 表示失败 */
+
+    memset(output, 0, TENSOR_SIZE * sizeof(float));
+
+    /* --- 归一化 --- */
+    float sum_sq = 0.0f;
+    for (size_t i = 0; i < N; i++) {
+        sum_sq += sig_i[i] * sig_i[i] + sig_q[i] * sig_q[i];
+    }
+    float scale = 1.0f / (3.0f * (sqrtf(sum_sq / N) + 1e-9f));
+
+    /* --- 分配特征缓冲 (malloc, 用完 free) --- */
+    float* real_v = (float*)malloc(N * sizeof(float));
+    float* imag_v = (float*)malloc(N * sizeof(float));
+    float* phase_v = (float*)malloc(N * sizeof(float));
+    float* mag_v = (float*)malloc(N * sizeof(float));
+    float* d_real = (float*)malloc((N - 1) * sizeof(float));
+    float* d_imag = (float*)malloc((N - 1) * sizeof(float));
+
+    if (!real_v || !imag_v || !phase_v || !mag_v || !d_real || !d_imag) {
+        free(real_v); free(imag_v); free(phase_v);
+        free(mag_v);  free(d_real); free(d_imag);
+        return 0;
+    }
+
+    /* --- 一次遍历: 归一化 + 提取 real/imag/phase/mag --- */
+    for (size_t i = 0; i < N; i++) {
+        float r = sig_i[i] * scale;
+        float q = sig_q[i] * scale;
+        real_v[i] = r;
+        imag_v[i] = q;
+        phase_v[i] = atan2f(q, r) / PI_F;     /* -1 ~ 1 */
+        mag_v[i] = sqrtf(r * r + q * q);
+    }
+
+    /* --- 微分: 展开复数共轭乘法, 直接算到 d_real/d_imag --- */
+    float d_sum_sq = 0.0f;
+    for (size_t i = 0; i < N - 1; i++) {
+        float ar = real_v[i + 1], ai = imag_v[i + 1];
+        float br = real_v[i], bi = imag_v[i];
+        /*  (a+bi)(c-di) = (ac+bd) + (bc-ad)i  */
+        float pr = ar * br + ai * bi;
+        float pi = ai * br - ar * bi;
+        d_real[i] = pr;
+        d_imag[i] = pi;
+        d_sum_sq += pr * pr + pi * pi;
+    }
+
+    /* 原地归一化 */
+    float d_inv = 1.0f / (3.0f * (sqrtf(d_sum_sq / (N - 1)) + 1e-9f));
+    for (size_t i = 0; i < N - 1; i++) {
+        d_real[i] *= d_inv;
+        d_imag[i] *= d_inv;
+    }
+
+    /* --- 生成 3 个直方图通道 --- */
+    fill_hist_channel(real_v, imag_v, N, -1.2f, 1.2f, -1.2f, 1.2f, output, 0);
+    fill_hist_channel(phase_v, mag_v, N, -1.0f, 1.0f, 0.0f, 1.5f, output, 1);
+    fill_hist_channel(d_real, d_imag, N - 1, -1.2f, 1.2f, -1.2f, 1.2f, output, 2);
+
+    /* 释放 */
+    free(real_v);  free(imag_v);
+    free(phase_v); free(mag_v);
+    free(d_real);  free(d_imag);
+
+    return 1;  /* 成功 */
+}
+
+// ===================================================================
+// Windows 宽字符转换 (只在 Windows 下需要)
+// ===================================================================
+#ifdef _WIN32
+static wchar_t* to_wide(const char* str, wchar_t* buf, int buf_len) {
+    MultiByteToWideChar(CP_UTF8, 0, str, -1, buf, buf_len);
+    return buf;
+}
+#endif
+
+// ===================================================================
+// 主函数
+// ===================================================================
+int main(int argc, char* argv[]) {
+    /* --- 参数 (简单的 argv, 有默认值) --- */
+    const char* onnx_path = (argc > 1) ? argv[1] : "./best_model_int8.onnx";
+    const char* labels_path = (argc > 2) ? argv[2] : "./labels_12.txt";
+    const char* iq_path = (argc > 3) ? argv[3] : "E:/Project/AMR-Benchmark/FSK4DEV625K-03-24-25-11h12m50s21.iq";
+
+    /* 1. 加载标签 */
+    if (load_labels(labels_path) <= 0) {
+        fprintf(stderr, "标签加载失败\n");
+        return -1;
+    }
+    printf("已加载 %d 个标签\n", g_num_labels);
+
+    /* 2. 初始化 ORT (这部分必须用 C++ 因为 ORT API 就是 C++) */
+    Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "Classifier");
+    Ort::SessionOptions opts;
+    opts.SetGraphOptimizationLevel(ORT_ENABLE_BASIC);
+    OrtSessionOptionsAppendExecutionProvider_CPU(opts, 0);
+
+#ifdef _WIN32
+    wchar_t wpath[512];
+    to_wide(onnx_path, wpath, 512);
+    Ort::Session session(env, wpath, opts);
+#else
+    Ort::Session session(env, onnx_path, opts);
+#endif
+
+    /* ★ ORT 1.7.0: 获取名称 → strcpy 到栈数组 → 立刻 Free */
+    Ort::AllocatorWithDefaultOptions allocator;
+
+    char in_name[64] = { 0 };
+    char out_name[64] = { 0 };
+    char* tmp;
+
+    tmp = session.GetInputName(0, allocator);
+    strncpy(in_name, tmp, 63);
+    allocator.Free(tmp);
+    tmp = NULL;
+
+    tmp = session.GetOutputName(0, allocator);
+    strncpy(out_name, tmp, 63);
+    allocator.Free(tmp);
+    tmp = NULL;
+
+    const char* in_names[] = { in_name };
+    const char* out_names[] = { out_name };
+
+    printf("模型加载成功 (输入: %s, 输出: %s)\n", in_name, out_name);
+
+    /* 3. 读取 IQ 文件 */
+    float* sig_i = NULL;
+    float* sig_q = NULL;
+    size_t total_points = 0;
+
+    if (load_iq_file(iq_path, &sig_i, &sig_q, &total_points) != 0) {
+        return -1;
+    }
+
+    size_t num_slices = total_points / SAMPLES_PER_IMAGE;
+    printf("共 %zu 个采样点, %zu 个切片\n", total_points, num_slices);
+
+    if (num_slices == 0) {
+        fprintf(stderr, "数据不足一个切片\n");
+        free(sig_i); free(sig_q);
+        return -1;
+    }
+
+    /* 4. 推理循环 */
+    float tensor_buf[TENSOR_SIZE];   /* 48KB 栈上, 复用 */
+    int64_t shape[] = { 1, CHANNELS, IMAGE_SIZE, IMAGE_SIZE };
+    auto mem_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+    int votes[MAX_LABELS];
+    memset(votes, 0, sizeof(votes));
+
+    for (size_t i = 0; i < num_slices; i++) {
+        size_t off = i * SAMPLES_PER_IMAGE;
+
+        /* 预处理 (传指针+偏移量, 零拷贝) */
+        if (!preprocess_slice(sig_i + off, sig_q + off,
+            SAMPLES_PER_IMAGE, tensor_buf)) {
+            fprintf(stderr, "Slice %zu: 无效, 跳过\n", i);
+            continue;
+        }
+
+        /* 推理 */
+        try {
+            Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
+                mem_info, tensor_buf, TENSOR_SIZE, shape, 4);
+
+            auto outputs = session.Run(
+                Ort::RunOptions{ nullptr },
+                in_names, &input_tensor, 1,
+                out_names, 1);
+
+            float* logits = outputs[0].GetTensorMutableData<float>();
+
+            /* argmax */
+            int best_idx = 0;
+            float max_logit = logits[0];
+            for (int k = 1; k < g_num_labels; k++) {
+                if (logits[k] > max_logit) {
+                    max_logit = logits[k];
+                    best_idx = k;
+                }
+            }
+
+            /* softmax 置信度 (标准写法) */
+            float sum_exp = 0.0f;
+            for (int k = 0; k < g_num_labels; k++) {
+                sum_exp += expf(logits[k] - max_logit);
+            }
+            float conf = expf(logits[best_idx] - max_logit) / sum_exp;
+
+            votes[best_idx]++;
+
+            if (i < 20 || i % 100 == 0) {
+                printf("Slice %zu: %s (%.1f%%)\n",
+                    i, g_labels[best_idx], conf * 100.0f);
+            }
+        }
+        catch (const std::exception& e) {
+            fprintf(stderr, "Slice %zu 推理异常: %s\n", i, e.what());
+        }
+    }
+
+    /* 5. 投票结果 */
+    int final_idx = -1;
+    int max_votes = 0;
+
+    printf("\n======== 投票结果 ========\n");
+    for (int k = 0; k < g_num_labels; k++) {
+        if (votes[k] > 0) {
+            printf("%s: %d 票\n", g_labels[k], votes[k]);
+            if (votes[k] > max_votes) {
+                max_votes = votes[k];
+                final_idx = k;
+            }
+        }
+    }
+
+    if (final_idx >= 0) {
+        printf("--------------------------\n");
+        printf("判定: %s\n", g_labels[final_idx]);
+        printf("置信: %.1f%%\n", (float)max_votes / num_slices * 100.0f);
+    }
+    else {
+        printf("无有效结果\n");
+    }
+
+    /* 释放 IQ 数据 */
+    free(sig_i);
+    free(sig_q);
+
+    return 0;
+}
