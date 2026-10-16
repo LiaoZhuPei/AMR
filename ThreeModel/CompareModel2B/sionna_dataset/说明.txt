@@ -1,0 +1,489 @@
+sionna_amr_data.npz
+verify_iq_scatter.png
+SIGNAL_LENGTH       = 1024
+SPS                 = 4              # 每符号采样数
+NUM_SYMBOLS         = SIGNAL_LENGTH // SPS   # 256
+ROLLOFF             = 0.35
+RRC_TAPS            = 101
+
+N_PER_CLASS_PER_SNR = 200
+SNR_LIST_DB         = list(range(-18, 22, 2))  # -18 ~ 20 dB
+
+CHANNEL             = 'awgn'         # 'awgn' / 'rayleigh' / 'rician'
+RICIAN_K_DB         = 10
+
+ADD_IMPAIRMENTS     = True
+MAX_CFO_NORM        = 0.001
+MAX_PHASE           = 2 * np.pi
+
+TRAIN_RATIO         = 0.8
+SAVE_DIR            = './sionna_dataset'
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+CLASSES = ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+           '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+           '128QAM', '256QAM', 'MSK']
+NUM_CLASSES = len(CLASSES)
+======================================================================
+sionna_amr_data_pro.npz
+
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'mixed',
+    'mixed_weights':        {                           # 仅 channel_type='mixed' 有效
+        'awgn':             0.50,   # 原：0.30 → 改1：0.5
+        'flat_rayleigh':    0.20,
+        'flat_rician':      0.20,   # 原：0.15 → 改1：0.2
+        'multipath':        0.10,   # 原：0.35 → 改1：0.1
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       4,          # 原：8 → 改1：4
+    'multipath_tau_rms':    1.5,        # 原：3.0 → 改1：1.5
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            True,
+    'pa_ibo_db':            15.0,        # 原：8 → 改1：15
+    'pa_p':                 3,          # Rapp 模型平滑因子
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   True,
+    'cfo_max_norm':         0.0003,      # 最大归一化频偏 Δf/fs：原 0.001 → 0.0003
+    'phase_noise_std':      0.002,       # Wiener 过程 σ (rad/sample)：原 0.01 → 0.002
+    'iq_gain_imb_max_db':   0.3,        # 最大 IQ 增益不平衡 (dB)：原 1.0 → 0.3
+    'iq_phase_imb_max_deg': 2.0,        # 最大 IQ 相位不平衡 (°)：原 5.0 → 2.0
+    'dc_offset_max':        0.005,       # 最大 DC 偏移 (相对值)：原 0.02 → 0.005
+    'timing_offset_max':    0.15,        # 最大分数采样偏移 (样点)：原 0.4 → 0.15
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
+======================================================================
+sionna_amr_data_pro_random.npz
+
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'mixed',
+    'mixed_weights':        {                           # 仅 channel_type='mixed' 有效
+        'awgn':             0.30,   # 原：0.30 → 改1：0.5
+        'flat_rayleigh':    0.20,
+        'flat_rician':      0.15,   # 原：0.15 → 改1：0.2
+        'multipath':        0.35,   # 原：0.35 → 改1：0.1
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       8,          # 原：8 → 改1：4
+    'multipath_tau_rms':    3.0,        # 原：3.0 → 改1：1.5
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            True,
+    'pa_ibo_db':            8.0,        # 原：8 → 改1：15
+    'pa_p':                 3,          # Rapp 模型平滑因子
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   True,
+    'cfo_max_norm':         0.001,      # 最大归一化频偏 Δf/fs：原 0.001 → 0.0003
+    'phase_noise_std':      0.01,       # Wiener 过程 σ (rad/sample)：原 0.01 → 0.002
+    'iq_gain_imb_max_db':   1.0,        # 最大 IQ 增益不平衡 (dB)：原 1.0 → 0.3
+    'iq_phase_imb_max_deg': 5.0,        # 最大 IQ 相位不平衡 (°)：原 5.0 → 2.0
+    'dc_offset_max':        0.02,       # 最大 DC 偏移 (相对值)：原 0.02 → 0.005
+    'timing_offset_max':    0.4,        # 最大分数采样偏移 (样点)：原 0.4 → 0.15
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
++New RF函数
+
+======================================================================
+sionna_amr_data_pro_random_2.npz
+
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'mixed',
+    'mixed_weights':        {                           # 仅 channel_type='mixed' 有效
+        'awgn':             0.5,   # 原：0.30 → 改1：0.5
+        'flat_rayleigh':    0.20,
+        'flat_rician':      0.2,   # 原：0.15 → 改1：0.2
+        'multipath':        0.1,   # 原：0.35 → 改1：0.1
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       4,          # 原：8 → 改1：4
+    'multipath_tau_rms':    1.5,        # 原：3.0 → 改1：1.5
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            True,
+    'pa_ibo_db':            15.0,        # 原：8 → 改1：15
+    'pa_p':                 3,          # Rapp 模型平滑因子
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   True,
+    'cfo_max_norm':         0.0003,      # 最大归一化频偏 Δf/fs：原 0.001 → 0.0003
+    'phase_noise_std':      0.002,       # Wiener 过程 σ (rad/sample)：原 0.01 → 0.002
+    'iq_gain_imb_max_db':   0.3,        # 最大 IQ 增益不平衡 (dB)：原 1.0 → 0.3
+    'iq_phase_imb_max_deg': 2.0,        # 最大 IQ 相位不平衡 (°)：原 5.0 → 2.0
+    'dc_offset_max':        0.005,       # 最大 DC 偏移 (相对值)：原 0.02 → 0.005
+    'timing_offset_max':    0.15,        # 最大分数采样偏移 (样点)：原 0.4 → 0.15
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
++New RF函数
+
+======================================================================
+pro:
+CONFIG_EXP0 = {
+    'channel_type':         'mixed',
+    'mixed_weights':        {'awgn': 0.50, 'flat_rayleigh': 0.20,
+                             'flat_rician': 0.20, 'multipath': 0.10},
+    'multipath_taps':       4,
+    'multipath_tau_rms':    1.5,
+
+    'pa_enable':            True,
+    'pa_ibo_db':            15.0,
+    'pa_p':                 3,
+
+    'impairments_enable':   True,
+    'cfo_max_norm':         0.0003,
+    'phase_noise_std':      0.002,
+    'iq_gain_imb_max_db':   0.3,
+    'iq_phase_imb_max_deg': 2.0,
+    'dc_offset_max':        0.005,
+    'timing_offset_max':    0.15,
+}
+
+(依次关闭损伤)
+-----------------------------------------------------------
+sionna_amr_data_pro_q1.npz
+q1（关闭多径）:
+# 改动: multipath 权重 → 0，份额给 awgn
+'mixed_weights':        {'awgn': 0.60, 'flat_rayleigh': 0.20,
+                         'flat_rician': 0.20, 'multipath': 0.00},
+
+-----------------------------------------------------------
+sionna_amr_data_pro_q2.npz
+q2（关闭Rayleigh 衰落）
+'mixed_weights':        {'awgn': 0.80, 'flat_rayleigh': 0.00,
+                         'flat_rician': 0.20, 'multipath': 0.00},
+
+-----------------------------------------------------------
+sionna_amr_data_pro_q3.npz
+q3（关闭 Rician 衰落）
+'mixed_weights':        {'awgn': 1.00, 'flat_rayleigh': 0.00,
+                         'flat_rician': 0.00, 'multipath': 0.00},
+
+-----------------------------------------------------------
+sionna_amr_data_pro_q4.npz
+q4（关闭 PA 非线性）
+'channel_type':         'awgn',
+'pa_enable':            False, 
+
+-----------------------------------------------------------
+sionna_amr_data_pro_q5.npz
+q5(关闭相位噪声)
+'pa_enable':            False,
+'channel_type':         'awgn',
+'phase_noise_std':      0,             # ← 关闭
+
+-----------------------------------------------------------
+sionna_amr_data_pro_q6.npz
+q6(关闭 IQ 不平衡) 改7
+'phase_noise_std':      0,
+'iq_gain_imb_max_db':   0,             # ← 关闭
+'iq_phase_imb_max_deg': 0,             # ← 关闭
+
+-----------------------------------------------------------
+sionna_amr_data_pro_q7.npz
+q7(关闭 CFO)
+'phase_noise_std':      0,
+'iq_gain_imb_max_db':   0,
+'iq_phase_imb_max_deg': 0,
+'cfo_max_norm':         0,             # ← 关闭
+
+-----------------------------------------------------------
+sionna_amr_data_pro_q8.npz
+q8(关闭采样时偏)
+'cfo_max_norm':         0,
+'phase_noise_std':      0,
+'iq_gain_imb_max_db':   0,
+'iq_phase_imb_max_deg': 0,
+'timing_offset_max':    0,    
+
+
+-----------------------------------------------------------
+sionna_amr_data_pro_q9.npz
+q9(关闭 DC 偏移)
+'channel_type':         'awgn',
+'pa_enable':            False,
+'impairments_enable':   False,         # ← 全部关闭
+
+======================================================================
+pro(修改后)：
+
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'awgn',  # 原：mixed → 改5：'awgn'
+    'mixed_weights':        {                           # 仅 channel_type='mixed' 有效
+        'awgn':             1.00,   # 原：0.30 → 改1：0.5 → 改2：0.6 → 改3：0.8  → 改4: 1
+        'flat_rayleigh':    0.00,   # 原： 0.2 → 改3：0
+        'flat_rician':      0.00,   # 原：0.15 → 改1：0.2 → 改4: 0
+        'multipath':        0.00,   # 原：0.35 → 改1：0.1 → 改2：0.0
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       4,          # 原：8 → 改1：4
+    'multipath_tau_rms':    1.5,        # 原：3.0 → 改1：1.5
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            False,   # 原：True → 改5：False
+    'pa_ibo_db':            15.0,        # 原：8 → 改1：15
+    'pa_p':                 3,          # Rapp 模型平滑因子
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   False,   # 原：True → 改10：False
+    'cfo_max_norm':         0.0003,      # 最大归一化频偏 Δf/fs：原 0.001 → 改1：0.0003
+    'phase_noise_std':      0.000,       # Wiener 过程 σ (rad/sample)：原 0.01 → 改1：0.002 → 改6：0
+    'iq_gain_imb_max_db':   0.0,        # 最大 IQ 增益不平衡 (dB)：原 1.0 → 改1：0.3 → 改7：0
+    'iq_phase_imb_max_deg': 0.0,        # 最大 IQ 相位不平衡 (°)：原 5.0 → 改1：2.0 → 改7：0
+    'dc_offset_max':        0.000,       # 最大 DC 偏移 (相对值)：原 0.02 → 改1：0.005 → 改8：0
+    'timing_offset_max':    0.0,        # 最大分数采样偏移 (样点)：原 0.4 → 改1：0.15 → 改9：0
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
+
+sionna_amr_data_pro_r9.npz
+r9（全部关闭）
+
+-----------------------------------------------------------
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'mixed',  # 原：mixed → 改5：'awgn'
+    'mixed_weights':        {                           # 仅 channel_type='mixed' 有效
+        'awgn':             0.30,   # 原：0.30 → 改1：0.5 → 改2：0.6 → 改3：0.8  → 改4: 1
+        'flat_rayleigh':    0.20,   # 原： 0.2 → 改3：0
+        'flat_rician':      0.15,   # 原：0.15 → 改1：0.2 → 改4: 0
+        'multipath':        0.35,   # 原：0.35 → 改1：0.1 → 改2：0.0
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       8,          # 原：8 → 改1：4
+    'multipath_tau_rms':    3.0,        # 原：3.0 → 改1：1.5
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            True,   # 原：True → 改5：False
+    'pa_ibo_db':            8.0,        # 原：8 → 改1：15
+    'pa_p':                 3,          # Rapp 模型平滑因子
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   True,   # 原：True → 改10：False
+    'cfo_max_norm':         0.001,      # 最大归一化频偏 Δf/fs：原 0.001 → 改1：0.0003
+    'phase_noise_std':      0.010,       # Wiener 过程 σ (rad/sample)：原 0.01 → 改1：0.002 → 改6：0
+    'iq_gain_imb_max_db':   1.0,        # 最大 IQ 增益不平衡 (dB)：原 1.0 → 改1：0.3 → 改7：0
+    'iq_phase_imb_max_deg': 5.0,        # 最大 IQ 相位不平衡 (°)：原 5.0 → 改1：2.0 → 改7：0
+    'dc_offset_max':        0.020,       # 最大 DC 偏移 (相对值)：原 0.02 → 改1：0.005 → 改8：0
+    'timing_offset_max':    0.4,        # 最大分数采样偏移 (样点)：原 0.4 → 改1：0.15 → 改9：0
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
+
+sionna_amr_data_pro_r.npz
+
+-----------------------------------------------------------
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'mixed',  # 原：mixed → 改5：'awgn'
+    'mixed_weights':        {                           # 仅 channel_type='mixed' 有效
+        'awgn':             0.50,   # 原：0.30 → 改1：0.5 → 改2：0.6 → 改3：0.8  → 改4: 1
+        'flat_rayleigh':    0.20,   # 原： 0.2 → 改3：0
+        'flat_rician':      0.2,   # 原：0.15 → 改1：0.2 → 改4: 0
+        'multipath':        0.1,   # 原：0.35 → 改1：0.1 → 改2：0.0
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       4,          # 原：8 → 改1：4
+    'multipath_tau_rms':    1.50,        # 原：3.0 → 改1：1.5
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            True,   # 原：True → 改5：False
+    'pa_ibo_db':            15.0,        # 原：8 → 改1：15
+    'pa_p':                 3,          # Rapp 模型平滑因子
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   True,   # 原：True → 改10：False
+    'cfo_max_norm':         0.0003,      # 最大归一化频偏 Δf/fs：原 0.001 → 改1：0.0003
+    'phase_noise_std':      0.002,       # Wiener 过程 σ (rad/sample)：原 0.01 → 改1：0.002 → 改6：0
+    'iq_gain_imb_max_db':   0.3,        # 最大 IQ 增益不平衡 (dB)：原 1.0 → 改1：0.3 → 改7：0
+    'iq_phase_imb_max_deg': 2.0,        # 最大 IQ 相位不平衡 (°)：原 5.0 → 改1：2.0 → 改7：0
+    'dc_offset_max':        0.005,       # 最大 DC 偏移 (相对值)：原 0.02 → 改1：0.005 → 改8：0
+    'timing_offset_max':    0.15,        # 最大分数采样偏移 (样点)：原 0.4 → 改1：0.15 → 改9：0
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
+
+
+sionna_amr_data_pro_r0.npz
+
+-----------------------------------------------------------
+在r0的基础上
+sionna_amr_data_pro_r1.npz
+'mixed_weights':        {'awgn': 0.60, 'flat_rayleigh': 0.20,
+                         'flat_rician': 0.20, 'multipath': 0.00},
+
+-----------------------------------------------------------
+在r1的基础上
+sionna_amr_data_pro_r2.npz
+'mixed_weights':        {'awgn': 0.80, 'flat_rayleigh': 0.00,
+                         'flat_rician': 0.20, 'multipath': 0.00},
+
+-----------------------------------------------------------
+在r2的基础上
+sionna_amr_data_pro_r3.npz
+'mixed_weights':        {'awgn': 1.00, 'flat_rayleigh': 0.00,
+                         'flat_rician': 0.00, 'multipath': 0.00},
+
+-----------------------------------------------------------
+在r3的基础上
+sionna_amr_data_pro_r4.npz
+'channel_type':         'awgn',
+'pa_enable':            False,         # ← 关闭
+
+-----------------------------------------------------------
+在r4的基础上
+sionna_amr_data_pro_r5.npz
+'pa_enable':            False,
+'channel_type':         'awgn',
+'phase_noise_std':      0,             # ← 关闭
+
+-----------------------------------------------------------
+在r5的基础上
+sionna_amr_data_pro_r6.npz
+'phase_noise_std':      0,
+'iq_gain_imb_max_db':   0,             # ← 关闭
+'iq_phase_imb_max_deg': 0,             # ← 关闭
+
+-----------------------------------------------------------
+在r6的基础上
+sionna_amr_data_pro_r7.npz
+'phase_noise_std':      0,
+'iq_gain_imb_max_db':   0,
+'iq_phase_imb_max_deg': 0,
+'cfo_max_norm':         0,             # ← 关闭
+
+-----------------------------------------------------------
+在r7的基础上
+sionna_amr_data_pro_r8.npz
+'cfo_max_norm':         0,
+'phase_noise_std':      0,
+'iq_gain_imb_max_db':   0,
+'iq_phase_imb_max_deg': 0,
+'timing_offset_max':    0, 
+
+
+
+
+
+
+
+
+
+
+

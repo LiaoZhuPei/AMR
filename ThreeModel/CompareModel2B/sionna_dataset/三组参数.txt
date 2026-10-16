@@ -1,0 +1,245 @@
+A：
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'mixed',  
+    'mixed_weights':        {                           
+        'awgn':             0.30,   
+        'flat_rayleigh':    0.20,   
+        'flat_rician':      0.15,   
+        'multipath':        0.35,   
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       8,          
+    'multipath_tau_rms':    3.0,        
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            True,   
+    'pa_ibo_db':            8.0,        
+    'pa_p':                 3,          # Rapp 模型平滑因子
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   True,   
+    'cfo_max_norm':         0.001,      # 最大归一化频偏 Δf/fs
+    'phase_noise_std':      0.010,       # Wiener 过程 σ (rad/sample)
+    'iq_gain_imb_max_db':   1.0,        # 最大 IQ 增益不平衡 (dB)
+    'iq_phase_imb_max_deg': 5.0,        # 最大 IQ 相位不平衡 (°)
+    'dc_offset_max':        0.020,       # 最大 DC 偏移 (相对值)
+    'timing_offset_max':    0.4,        # 最大分数采样偏移 (样点)
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
+
+SionnaA_1.npz
+------------------
+SionnaA_2.npz
+n_per_class_per_snr':  200 -> 800
+------------------
+SionnaA_3.npz
+n_per_class_per_snr':  800 -> 3200
+------------------
+SionnaA_4.npz
+'snr_list_db':          list(range(-2, 38, 2)),
+n_per_class_per_snr': 200
+------------------
+SionnaA_5.npz
+'snr_list_db':          list(range(-2, 38, 2)),
+n_per_class_per_snr': 800
+------------------
+SionnaA_6.npz
+'snr_list_db':          list(range(-2, 38, 2)),
+n_per_class_per_snr': 3200
+------------------
+SionnaA_7.npz
+'snr_list_db':          list(range(-2, 38, 2)),
+n_per_class_per_snr': 1600
+------------------
+SionnaA_8.npz
+'snr_list_db':          list(range(-2, 38, 2)),
+n_per_class_per_snr': 1600
+'cfo_max_norm':         0.01,
+------------------
+SionnaA_9.npz
+'snr_list_db':          list(range(-2, 38, 1)),
+n_per_class_per_snr': 400
+
+X: (224000, 2, 1024)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+============================================================================
+A（-）：
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'mixed',  
+    'mixed_weights':        {                         
+        'awgn':             0.50,  
+        'flat_rayleigh':    0.20,   
+        'flat_rician':      0.2,  
+        'multipath':        0.1,   
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       4,          
+    'multipath_tau_rms':    1.50,        
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            True,   
+    'pa_ibo_db':            15.0,        
+    'pa_p':                 3,          
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   True,   
+    'cfo_max_norm':         0.0003,      # 最大归一化频偏 Δf/fs
+    'phase_noise_std':      0.002,       # Wiener 过程 σ (rad/sample)
+    'iq_gain_imb_max_db':   0.3,        # 最大 IQ 增益不平衡 (dB)
+    'iq_phase_imb_max_deg': 2.0,        # 最大 IQ 相位不平衡 (°)
+    'dc_offset_max':        0.005,       # 最大 DC 偏移 (相对值)
+    'timing_offset_max':    0.15,        # 最大分数采样偏移 (样点)
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
+============================================================================
+B：
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'awgn',  
+    'mixed_weights':        {                           
+        'awgn':             1.00,   
+        'flat_rayleigh':    0.00,   
+        'flat_rician':      0.00,   
+        'multipath':        0.00,   
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       8,          
+    'multipath_tau_rms':    3.0,        
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            False,   
+    'pa_ibo_db':            8.0,        
+    'pa_p':                 3,          # Rapp 模型平滑因子
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   True,   
+    'cfo_max_norm':         0.001,      # 最大归一化频偏 Δf/fs
+    'phase_noise_std':      0.010,       # Wiener 过程 σ (rad/sample)
+    'iq_gain_imb_max_db':   1.0,        # 最大 IQ 增益不平衡 (dB)
+    'iq_phase_imb_max_deg': 5.0,        # 最大 IQ 相位不平衡 (°)
+    'dc_offset_max':        0.020,       # 最大 DC 偏移 (相对值)
+    'timing_offset_max':    0.4,        # 最大分数采样偏移 (样点)
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
+============================================================================
+C：
+CONFIG = {
+    # ---- 信号参数 ----
+    'signal_length':        1024,
+    'sps':                  4,
+    'rolloff':              0.35,
+    'rrc_taps':             101,
+
+    # ---- 数据集规模 ----
+    'n_per_class_per_snr':  200,
+    'snr_list_db':          list(range(-18, 22, 2)),   # 20 档
+    'train_ratio':          0.8,
+    'save_dir':             './sionna_dataset',
+
+    # ---- 信道 ----
+    'channel_type':         'awgn',  
+    'mixed_weights':        {                           
+        'awgn':             1.00,   
+        'flat_rayleigh':    0.00,   
+        'flat_rician':      0.00,   
+        'multipath':        0.00,   
+    },
+    'rician_k_db':          10.0,
+    'multipath_taps':       8,          
+    'multipath_tau_rms':    3.0,        
+
+    # ---- 发射端损伤 ----
+    'pa_enable':            False,   
+    'pa_ibo_db':            8.0,        
+    'pa_p':                 3,          # Rapp 模型平滑因子
+
+    # ---- 接收端损伤 ----
+    'impairments_enable':   True,   
+    'cfo_max_norm':         0.001,      # 最大归一化频偏 Δf/fs
+    'phase_noise_std':      0.000,       # Wiener 过程 σ (rad/sample)
+    'iq_gain_imb_max_db':   0.0,        # 最大 IQ 增益不平衡 (dB)
+    'iq_phase_imb_max_deg': 0.0,        # 最大 IQ 相位不平衡 (°)
+    'dc_offset_max':        0.020,       # 最大 DC 偏移 (相对值)
+    'timing_offset_max':    0.4,        # 最大分数采样偏移 (样点)
+
+    # ---- 调制类别 ----
+    'classes': ['BPSK', 'QPSK', '8PSK', 'OQPSK', '2FSK', '4FSK',
+                '16QAM', '2ASK', 'Pi4DQPSK', '64QAM', '32QAM',
+                '128QAM', '256QAM', 'MSK'],
+
+    # ---- 可复现性 ----
+    'seed':                 42,
+}
