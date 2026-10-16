@@ -1,0 +1,134 @@
+我想使用深度学习做一个协议识别项目：
+我的需求是：
+这个项目是开放集问题，核心是为了识别输入信号是否为Link11，
+我期望是构建一个模型，可以对目标提取特征或建模，然后将Link11信号视为合法信号。
+在实际应用中，这个模型输入一个陌生信号，并判断这个陌生的信号是否为Link11，而这个陌生信号可以没有出现在训练数据当中。
+因此：给出最为推荐方法的深度学习项目，包含必要文件，尽可能从一个简单但是可靠的方法出发，后续可扩展改进，首次不用太复杂，主要是一个项目模；即方法可以修改，但是必要的组件或功能要通用
+由于缺乏Link11数据，因此采用下列数据作为代替，以验证方法：
+数据集链接：https://panoradio-sdr.de/radio-signal-classification-dataset/
+正类（Known Target）：将数据集中的 MT63 信号设为正类，假装它是Link 11 (CLEW)。
+已知负类（Known Unknowns/背景类）：挑选数据集中的 RTTY、SSB 语音、AM 广播 这 3 种信号作为“示例负样本”
+未知负类（Unknown Unknowns/开集拒识测试）：将数据集中的 PSK31、Morse Code、Olivia 这几种信号彻底从训练集中拿掉。
+模型测试：
+输入 MT63：模型应该正确判定为“Link 11”；
+输入 RTTY/SSB:模型应该判定为“已知干扰/非目标”；
+输入 PSK31/Morse:模型应该凭借边界约束，将其判定为“未知信号/安全拒识”。
+
+
+
+可不可以只修改单个数据集处理文件，因为从网站上看，数据集是[dataset_panoradio_hf.npy]样式 ，描述：Data stored as 2-D numpy array with shape=(172800, 2048)
+172800 signals
+2048 IQ samples (complex)
+fs = 6000 Hz
+power normalized to 1
+frequency offset +- 250 Hz
+SNR: 25, 20, 15, 10, 5, 0, -5, -10 dB
+fading channels: CCIR 520
+modes:
+"morse",
+"psk31",
+"psk63",
+"qpsk31",
+"rtty45_170",
+"rtty50_170",
+"rtty100_850",
+"olivia8_250",
+"olivia16_500",
+"olivia16_1000",
+"olivia32_1000",
+"dominoex11",
+"mt63_1000",
+"navtex",
+"usb",
+"lsb",
+"am",
+"fax"
+还有一个dataset_panoradio_hf_tags.csv文件，保存着标签信息：
+idx| mode  |snr
+0  | morse |25
+···
+9714  | psk31 |25
+
+我想做一个协议识别项目：
+我的需求是：
+这个项目是开放集问题，核心是为了识别输入信号是否为Link11，
+我期望是使用可靠的算法（非深度学习方法），然后将Link11信号视为合法信号。
+在实际应用中，这个模型输入一个陌生信号，并判断这个陌生的信号是否为Link11，而这个陌生信号可以没有出现在训练数据当中。
+由于缺乏Link11数据，因此采用下列数据作为代替，以验证方法：
+数据集链接：https://panoradio-sdr.de/radio-signal-classification-dataset/
+数据集是[dataset_panoradio_hf.npy]样式 ，描述：Data stored as 2-D numpy array with shape=(172800, 2048)
+172800 signals
+2048 IQ samples (complex)
+fs = 6000 Hz
+power normalized to 1
+frequency offset +- 250 Hz
+SNR: 25, 20, 15, 10, 5, 0, -5, -10 dB
+fading channels: CCIR 520
+modes:
+"morse",
+"psk31",
+"psk63",
+"qpsk31",
+"rtty45_170",
+"rtty50_170",
+"rtty100_850",
+"olivia8_250",
+"olivia16_500",
+"olivia16_1000",
+"olivia32_1000",
+"dominoex11",
+"mt63_1000",
+"navtex",
+"usb",
+"lsb",
+"am",
+"fax"
+还有一个dataset_panoradio_hf_tags.csv文件，保存着标签信息：
+idx| mode  |snr
+0  | morse |25
+···
+9714  | psk31 |25
+
+
+我想做一个协议识别项目：
+我的需求是：
+这个项目是开放集问题，最终模式为：输入：信号；输出：是Link11 或 非法信号
+我期望是按照人脸识别的逻辑，即训练一个可靠的特征提取器，等未来Link11信号可获取后，对Link11提取特征，保存为一个模板以实现识别效果：
+人脸识别的描述，用于参考：
+特征分析： 一旦人脸被隔离，软件就会映射关键节点，例如双眼之间的距离、鼻子的宽度以及下颌线的轮廓。此过程涉及特征提取，旨在识别在光照或表情变化时保持一致的标志性特征。
+编码： 分析后的几何结构被转换为数字向量或“人脸印记”，通常被称为嵌入 (embedding)。这种数学表示使计算机能够高效地处理人脸数据。
+匹配： 系统将新的人脸印记与已知个人的向量数据库进行比对。如果相似度分数超过预定义的置信度阈值，则身份即被验证。
+采用一下数据集，以验证方法：
+数据集链接：https://panoradio-sdr.de/radio-signal-classification-dataset/
+数据集是[dataset_panoradio_hf.npy]样式 ，描述：Data stored as 2-D numpy array with shape=(172800, 2048)
+172800 signals
+2048 IQ samples (complex)
+fs = 6000 Hz
+power normalized to 1
+frequency offset +- 250 Hz
+SNR: 25, 20, 15, 10, 5, 0, -5, -10 dB
+fading channels: CCIR 520
+modes:
+"morse",
+"psk31",
+"psk63",
+"qpsk31",
+"rtty45_170",
+"rtty50_170",
+"rtty100_850",
+"olivia8_250",
+"olivia16_500",
+"olivia16_1000",
+"olivia32_1000",
+"dominoex11",
+"mt63_1000",
+"navtex",
+"usb",
+"lsb",
+"am",
+"fax"
+还有一个dataset_panoradio_hf_tags.csv文件，保存着标签信息：
+idx| mode |snr
+0 | morse |25
+···
+9714 | psk31 |25
