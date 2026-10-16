@@ -1,0 +1,24 @@
+对多种调制类型进行仿真
+仿真长度为1024（采样点数）
+固定 过采样率 为4
+
+
+qam
+   16qam
+   32qam
+   64qam
+psk
+   bpsk
+   qpsk
+   8psk
+(pai/4)dqpsk
+oqpsk
+msk
+fsk
+   2fsk
+   4fsk
+fm
+am
+apsk
+ask
+   2ask
