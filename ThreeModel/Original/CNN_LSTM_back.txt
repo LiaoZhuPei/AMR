@@ -1,0 +1,140 @@
+# 文件名: CNNtrain/rmlmodels/CNNLSTM.py
+
+import os
+import torch
+import torch.nn as nn
+from torchsummary import summary
+
+class CNNLSTM(nn.Module):
+    def __init__(self, input_shape=[1, 2, 1024], classes=11, sps=4, **kwargs):
+        """
+        参考 Matlab 代码实现的 CNN + BiLSTM 模型
+        
+        参数:
+            input_shape: 输入维度 [Batch, 2, Length]
+            classes: 分类数
+            sps: Samples Per Symbol，对应 Matlab 中的 filterSize
+        """
+        super(CNNLSTM, self).__init__()
+        
+        # 对应 Matlab: filterSize = sps
+        self.filter_size = sps 
+        pool_size = 2
+        
+        # --- CNN 部分 (特征提取) ---
+        
+        # Block 1: 16 filters, Input -> [Batch, 16, Length/2]
+        self.conv1 = nn.Conv1d(in_channels=2, out_channels=16, kernel_size=self.filter_size, padding='same')
+        self.bn1 = nn.BatchNorm1d(16)
+        self.relu1 = nn.ReLU()
+        self.pool1 = nn.MaxPool1d(kernel_size=pool_size, stride=pool_size)
+
+        # Block 2: 32 filters, -> [Batch, 32, Length/4]
+        self.conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=self.filter_size, padding='same')
+        self.bn2 = nn.BatchNorm1d(32)
+        self.relu2 = nn.ReLU()
+        self.pool2 = nn.MaxPool1d(kernel_size=pool_size, stride=pool_size)
+
+        # Block 3: 48 filters, -> [Batch, 48, Length/8]
+        self.conv3 = nn.Conv1d(in_channels=32, out_channels=48, kernel_size=self.filter_size, padding='same')
+        self.bn3 = nn.BatchNorm1d(48)
+        self.relu3 = nn.ReLU()
+        self.pool3 = nn.MaxPool1d(kernel_size=pool_size, stride=pool_size)
+
+        # Block 4: 64 filters, -> [Batch, 64, Length/16]
+        # 对于 1024 的输入，经过4次 /2 池化，序列长度变为 64
+        self.conv4 = nn.Conv1d(in_channels=48, out_channels=64, kernel_size=self.filter_size, padding='same')
+        self.bn4 = nn.BatchNorm1d(64)
+        self.relu4 = nn.ReLU()
+        self.pool4 = nn.MaxPool1d(kernel_size=pool_size, stride=pool_size)
+
+        # --- LSTM 部分 (时序关联) ---
+        
+        # Matlab: bilstmLayer(128, 'OutputMode', 'last')
+        # PyTorch LSTM 输入要求: (Batch, Sequence_Length, Features) (当 batch_first=True)
+        # 这里的 Input Size 是 Conv4 的输出通道数 (64)
+        self.lstm_hidden_size = 128
+        self.lstm = nn.LSTM(
+            input_size=64, 
+            hidden_size=self.lstm_hidden_size, 
+            num_layers=1, 
+            bidirectional=True, 
+            batch_first=True
+        )
+
+        # --- 分类头 ---
+        
+        # Matlab: dropoutLayer(0.2)
+        self.dropout = nn.Dropout(0.5)
+        
+        # Matlab: fullyConnectedLayer(numModTypes)
+        # BiLSTM 输出维度是 hidden_size * 2 (因为是双向)
+        self.fc = nn.Linear(self.lstm_hidden_size * 2, classes)
+        
+        # PyTorch 的 CrossEntropyLoss 自带 Softmax，所以在模型结尾通常不加 Softmax 层
+        # 如果你需要输出概率，可以在推理时加 F.softmax
+
+    def forward(self, x):
+        # 处理输入维度: 如果是 [Batch, 1, 2, 1024]，压缩为 [Batch, 2, 1024]
+        if len(x.shape) == 4 and x.shape[1] == 1:
+            x = x.squeeze(1)
+
+        # --- CNN 前向传播 ---
+        x = self.pool1(self.relu1(self.bn1(self.conv1(x))))
+        x = self.pool2(self.relu2(self.bn2(self.conv2(x))))
+        x = self.pool3(self.relu3(self.bn3(self.conv3(x))))
+        x = self.pool4(self.relu4(self.bn4(self.conv4(x))))
+        
+        # 此时 x 的形状为: [Batch, Channels(64), Length(64)]
+        
+        # --- 数据维度转换 (Conv -> LSTM) ---
+        # LSTM 需要 [Batch, Length, Features]
+        # 因此我们需要交换维度 1 和 2
+        x = x.permute(0, 2, 1) 
+        # 此时 x 的形状为: [Batch, Length(64), Channels(64)]
+
+        # --- LSTM 前向传播 ---
+        # output: [Batch, Length, Hidden*2]
+        # (h_n, c_n): 最后一个时间步的隐状态
+        output, (h_n, c_n) = self.lstm(x)
+        
+        # Matlab: OutputMode='last' (取最后一个时间步的输出)
+        # 在 PyTorch BiLSTM 中，我们可以取 output 的最后一个切片
+        x = output[:, -1, :] # Shape: [Batch, 256]
+        
+        # 另一种写法是利用 h_n，但处理双向时稍微复杂一些，取 output[:, -1, :] 最直观对应 'last'
+
+        # --- 分类器 ---
+        x = self.dropout(x)
+        x = self.fc(x)
+
+        return x
+
+def build_model(weights_path=None, **kwargs):
+    model = CNNLSTM(**kwargs) # 使用新的类名
+    if weights_path:
+        if not os.path.exists(weights_path):
+            raise ValueError(f'The `weights_path` argument provided does not exist: {weights_path}')
+        model.load_state_dict(torch.load(weights_path))
+        print(f"Model weights loaded from {weights_path}")
+    return model
+
+if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    # 假设输入是 [Batch, 2, 1024]
+    # sps 应该根据你的数据设置，Matlab代码中它等于卷积核大小
+    model = build_model(classes=11, sps=8).to(device)
+    
+    print("模型结构:")
+    try:
+        # 输入尺寸 (Channels, SequenceLength)
+        summary(model, input_size=(2, 1024))
+    except Exception as e:
+        print(f"Summary Error: {e}")
+
+    # 前向传播测试
+    dummy_input = torch.randn(1, 1, 2, 1024).to(device)
+    output = model(dummy_input)
+    print(f"\nInput shape: {dummy_input.shape}")
+    print(f"Output shape: {output.shape}") # 应该是 [1, 11]
