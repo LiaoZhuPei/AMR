@@ -1,0 +1,115 @@
+根据你提供的 `yolox_matlab.txt` 源代码文件，这是一个 MATLAB 官方视觉工具箱（Computer Vision Toolbox）中 **`yoloxObjectDetector`** 类的完整定义。
+
+这个类主要负责 **YOLOX 模型的加载、配置、推理（检测）、以及部分训练支持**。它将 YOLOX 网络拆分为 Backbone（主干）、Neck（颈部）和 Head（头部）三个部分进行管理。
+
+以下是基于代码逻辑整理的**功能目录**：
+
+---
+
+### 1. 核心构造与初始化 (Constructor & Initialization)
+负责创建对象、加载预训练权重、配置网络结构。
+
+*   **`yoloxObjectDetector` (构造函数)**
+    *   **功能**：类的入口。
+    *   **支持模式**：
+        *   加载预训练模型（如 `"tiny-coco"`, `"small-coco"` 等）。
+        *   配置迁移学习（指定新的 `classNames`）。
+        *   设置输入尺寸 (`InputSize`) 和归一化参数。
+    *   **关键逻辑**：调用 `iTripwireYOLOXSubModels` 加载子模块，初始化网格 (`initializeGridsAndStrides`)。
+
+---
+
+### 2. 推理与检测接口 (Inference & Detection API)
+用户直接调用的主要功能，用于对图像进行目标检测。
+
+*   **`detect` (主检测方法)**
+    *   **功能**：输入图像，输出边界框 (bboxes)、得分 (scores) 和标签 (labels)。
+    *   **支持输入**：单张图片、批量图片、Datastore、GPU Array。
+    *   **可选参数**：支持 ROI（感兴趣区域）、阈值 (`Threshold`)、NMS (`SelectStrongest`)、最小/最大尺寸限制 (`MinSize`, `MaxSize`)、硬件环境 (`ExecutionEnvironment`)。
+    *   **流程**：`validateImageInput` -> `preprocess` -> `predict` -> `postprocess`。
+
+---
+
+### 3. 网络架构管理 (Network Architecture Management)
+该类的一个显著特点是将 YOLOX 网络拆解为三个独立的 `dlnetwork` 对象进行管理，但在需要时可以合并。
+
+*   **属性 (Properties)**
+    *   `Backbone`: CSP-Darknet53 主干网络。
+    *   `Neck`: FPN/PAN 结构。
+    *   `Head`: Decoupled Head（解耦头），负责分类和回归。
+*   **`dlnetwork` (隐藏方法)**
+    *   **功能**：**将 Backbone、Neck、Head 重新拼接成一个完整的、单体的 `dlnetwork` 对象。**
+    *   **重要性**：这就是你之前想在 `deepNetworkDesigner` 中查看网络时所需要的逻辑（通过 `connectLayers` 手动把断开的层连起来）。
+*   **`Layers` (依赖属性)**
+    *   **功能**：获取所有层的列表（垂直拼接三个子网的层）。
+
+---
+
+### 4. 内部预测流程 (Internal Prediction Pipeline)
+实现了从输入数据到输出特征图，再到解码为坐标框的全过程。
+
+*   **`predict`**
+    *   **功能**：执行前向传播。依次调用 Backbone -> Neck -> Head。
+    *   **逻辑**：处理不同的输入类型（Datastore vs 数组），计算 YOLOX 的 Head 输出。
+*   **`forward`**
+    *   **功能**：类似 `predict`，但用于训练阶段，会返回网络的状态 (State)。
+*   **`preprocess`**
+    *   **功能**：图像预处理。
+    *   **逻辑**：调整图像大小（保持长宽比）、裁剪 ROI、转换为 `dlarray`。
+*   **`postprocess`**
+    *   **功能**：后处理。
+    *   **逻辑**：
+        *   应用 Sigmoid 激活函数。
+        *   **解码**：将特征图上的相对偏移量转换为图像上的绝对坐标（调用 `visualinspection.yolox.internal.yoloxTransform`）。
+        *   过滤低置信度框。
+        *   执行 NMS（非极大值抑制，`selectStrongestBboxMulticlass`）。
+        *   映射回原图尺寸（处理 Resize 带来的缩放）。
+
+---
+
+### 5. 训练支持 (Training Support)
+为了支持 `trainYOLOXObjectDetector` 函数而设计的接口。
+
+*   **`FreezeBackbone`**
+    *   **功能**：设置是否冻结主干网络（迁移学习常用技巧）。
+*   **`Learnables` / `State`**
+    *   **功能**：获取或设置可学习参数（权重/偏置）和非学习状态（如 BN 层的统计量）。
+    *   **逻辑**：根据 `FreezeBackbone` 的状态，决定是返回所有参数，还是只返回 Neck 和 Head 的参数。
+*   **`updateLearnableParameters`**
+    *   **功能**：在训练循环中更新权重。
+
+---
+
+### 6. 数据辅助与计算 (Helper Calculation)
+用于 YOLOX 特有的几何计算。
+
+*   **`computeGridsAndStrides` (静态方法)**
+    *   **功能**：生成 Anchor Free 机制所需的网格坐标 (Grids) 和步长 (Strides)。
+    *   **逻辑**：基于 8, 16, 32 倍下采样生成网格。
+*   **`normalizationStatsDictionary`**
+    *   **功能**：管理不同归一化方式（zscore, zerocenter 等）的均值和方差。
+
+---
+
+### 7. 私有/本地辅助函数 (Local Functions - 底部)
+文件底部的非类方法函数，负责具体脏活累活。
+
+*   **模型加载器**：
+    *   `iMakeYOLOXNanoSubModels`, `iMakeYOLOXTinySubModels` ... `iMakeYOLOXLargeSubModels`：
+    *   **功能**：从 `.mat` 文件中分别加载 Backbone, Neck, Head 的权重。
+*   **网络修改器 (迁移学习核心)**：
+    *   **`iConfigureNetwork`**：修改 Head 的最后一层卷积层，以匹配新的类别数量 (`numClasses`)。
+    *   **`iUpdateFirstConvChannelsAndInputLayer`**：
+        *   **功能非常强大**：如果你输入的图片通道数（比如单通道灰度）和预训练模型（3通道 RGB）不一致，这个函数会自动修改第一层卷积层的权重（通过通道平均），使其能处理灰度图，而不会报错。
+*   **预处理实现**：
+    *   `iPreprocessForDetect`：包含 GPU 转换、ROI 裁剪、Resize 等具体实现。
+*   **输入校验**：
+    *   `iCheckInputSize`, `validateImageInput` 等。
+
+---
+
+### 总结
+这个文件是一个高度封装的 **YOLOX 检测器工厂**。它不仅包含了检测逻辑，还包含了：
+1.  **拼接逻辑**：把断开的三个子网连起来。
+2.  **适配逻辑**：自动处理灰度图输入、自动修改输出层类别数。
+3.  **解码逻辑**：把 YOLOX 特有的 Head 输出解码成坐标框。
