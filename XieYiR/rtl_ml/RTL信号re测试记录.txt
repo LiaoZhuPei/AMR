@@ -1,0 +1,997 @@
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy
+加载Link11样本: (200, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (200 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 200 条 (100.0%)
+  平均相似度: 0.9616
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9602    -0.0198
+    1       非法信号     0.9621    -0.0179
+    2       非法信号     0.9623    -0.0177
+    3       非法信号     0.9623    -0.0177
+    4       非法信号     0.9612    -0.0188
+    5       非法信号     0.9611    -0.0189
+    6       非法信号     0.9625    -0.0175
+    7       非法信号     0.9623    -0.0177
+    8       非法信号     0.9613    -0.0187
+    9       非法信号     0.9611    -0.0189
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_first_half_segments.npy --output_path templates_rtl/NOAA_weather_first.npz --augment_passes 5 --max_samples 2000
+设备: cuda
+加载特征提取器: checkpoints/best_extractor.pt
+特征提取器加载完毕 (参数已冻结)
+加载Link11样本: (2000, 2048), dtype=complex64
+提取嵌入 (TTA×5)...
+提取嵌入: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 32/32 [00:09<00:00,  3.38it/s]
+
+=== Link11 模板统计 ===
+样本数量:    2000
+嵌入维度:    128
+均值→自身相似度分布: mean=0.9898, std=0.0150, min=0.6938, max=1.0000
+推荐识别阈值: sim >= 0.9599  (均值 - 2σ, 约95%覆盖率)
+
+模板已保存: templates_rtl/NOAA_weather_first.npz
+推荐识别阈值: 0.9599
+
+下一步: 运行 scripts/identify.py --signal <未知信号> 进行识别
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9599)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy
+加载Link11样本: (200, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (200 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 200 条 (100.0%)
+  平均相似度: 0.9722
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9709    -0.0091
+    1       非法信号     0.9726    -0.0074
+    2       非法信号     0.9728    -0.0072
+    3       非法信号     0.9727    -0.0073
+    4       非法信号     0.9718    -0.0082
+    5       非法信号     0.9717    -0.0083
+    6       非法信号     0.9729    -0.0071
+    7       非法信号     0.9729    -0.0071
+    8       非法信号     0.9719    -0.0081
+    9       非法信号     0.9718    -0.0082
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9599)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_second_half_segments.npy
+加载Link11样本: (200, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (200 条信号):
+  Link11:   170 条 (85.0%)
+  非法信号: 30 条 (15.0%)
+  平均相似度: 0.9898
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9495    -0.0305
+    1     Link11     0.9996    +0.0196
+    2     Link11     0.9986    +0.0186
+    3     Link11     0.9960    +0.0160
+    4     Link11     0.9929    +0.0129
+    5     Link11     0.9940    +0.0140
+    6     Link11     0.9944    +0.0144
+    7     Link11     0.9918    +0.0118
+    8     Link11     1.0000    +0.0200
+    9     Link11     0.9958    +0.0158
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9599)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy
+加载Link11样本: (200, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (200 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 200 条 (100.0%)
+  平均相似度: 0.9753
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9752    -0.0048
+    1       非法信号     0.9751    -0.0049
+    2       非法信号     0.9754    -0.0046
+    3       非法信号     0.9756    -0.0044
+    4       非法信号     0.9755    -0.0045
+    5       非法信号     0.9753    -0.0047
+    6       非法信号     0.9751    -0.0049
+    7       非法信号     0.9755    -0.0045
+    8       非法信号     0.9752    -0.0048
+    9       非法信号     0.9754    -0.0046
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9599)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_second_half_segments.npy
+加载Link11样本: (200, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (200 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 200 条 (100.0%)
+  平均相似度: 0.9751
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9749    -0.0051
+    1       非法信号     0.9746    -0.0054
+    2       非法信号     0.9748    -0.0052
+    3       非法信号     0.9749    -0.0051
+    4       非法信号     0.9749    -0.0051
+    5       非法信号     0.9751    -0.0049
+    6       非法信号     0.9753    -0.0047
+    7       非法信号     0.9752    -0.0048
+    8       非法信号     0.9751    -0.0049
+    9       非法信号     0.9752    -0.0048
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/noise/noise_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9599)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/noise/noise_second_half_segments.npy
+加载Link11样本: (200, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (200 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 200 条 (100.0%)
+  平均相似度: 0.9727
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9727    -0.0073
+    1       非法信号     0.9720    -0.0080
+    2       非法信号     0.9727    -0.0073
+    3       非法信号     0.9730    -0.0070
+    4       非法信号     0.9731    -0.0069
+    5       非法信号     0.9727    -0.0073
+    6       非法信号     0.9735    -0.0065
+    7       非法信号     0.9730    -0.0070
+    8       非法信号     0.9726    -0.0074
+    9       非法信号     0.9723    -0.0077
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/pager/pager_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9599)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/pager/pager_second_half_segments.npy
+加载Link11样本: (200, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (200 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 200 条 (100.0%)
+  平均相似度: 0.9738
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9721    -0.0079
+    1       非法信号     0.9727    -0.0073
+    2       非法信号     0.9734    -0.0066
+    3       非法信号     0.9732    -0.0068
+    4       非法信号     0.9743    -0.0057
+    5       非法信号     0.9733    -0.0067
+    6       非法信号     0.9733    -0.0067
+    7       非法信号     0.9740    -0.0060
+    8       非法信号     0.9744    -0.0056
+    9       非法信号     0.9736    -0.0064
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9599)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9722
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9709    -0.0091
+    1       非法信号     0.9726    -0.0074
+    2       非法信号     0.9728    -0.0072
+    3       非法信号     0.9727    -0.0073
+    4       非法信号     0.9718    -0.0082
+    5       非法信号     0.9717    -0.0083
+    6       非法信号     0.9729    -0.0071
+    7       非法信号     0.9729    -0.0071
+    8       非法信号     0.9719    -0.0081
+    9       非法信号     0.9718    -0.0082
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_first_half_segments.npy --output_path templates_rtl/NOAA_weather_first.npz --augment_passes 5 --max_samples 20000              
+设备: cuda
+加载特征提取器: checkpoints/best_extractor.pt
+特征提取器加载完毕 (参数已冻结)
+加载Link11样本: (12500, 2048), dtype=complex64
+提取嵌入 (TTA×5)...
+提取嵌入: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 196/196 [00:50<00:00,  3.86it/s]
+
+=== Link11 模板统计 ===
+样本数量:    12500
+嵌入维度:    128
+均值→自身相似度分布: mean=0.9838, std=0.0321, min=0.5355, max=1.0000
+推荐识别阈值: sim >= 0.9196  (均值 - 2σ, 约95%覆盖率)
+
+模板已保存: templates_rtl/NOAA_weather_first.npz
+推荐识别阈值: 0.9196
+
+下一步: 运行 scripts/identify.py --signal <未知信号> 进行识别
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9196)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   368 条 (92.0%)
+  非法信号: 32 条 (8.0%)
+  平均相似度: 0.9923
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9562    -0.0238
+    1     Link11     0.9988    +0.0188
+    2     Link11     0.9973    +0.0173
+    3     Link11     0.9940    +0.0140
+    4     Link11     0.9952    +0.0152
+    5     Link11     0.9961    +0.0161
+    6     Link11     0.9965    +0.0165
+    7     Link11     0.9943    +0.0143
+    8     Link11     0.9998    +0.0198
+    9     Link11     0.9975    +0.0175
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9196)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9683
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9671    -0.0129
+    1       非法信号     0.9687    -0.0113
+    2       非法信号     0.9689    -0.0111
+    3       非法信号     0.9688    -0.0112
+    4       非法信号     0.9679    -0.0121
+    5       非法信号     0.9678    -0.0122
+    6       非法信号     0.9690    -0.0110
+    7       非法信号     0.9689    -0.0111
+    8       非法信号     0.9680    -0.0120
+    9       非法信号     0.9679    -0.0121
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9196)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9713
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9712    -0.0088
+    1       非法信号     0.9710    -0.0090
+    2       非法信号     0.9713    -0.0087
+    3       非法信号     0.9716    -0.0084
+    4       非法信号     0.9714    -0.0086
+    5       非法信号     0.9713    -0.0087
+    6       非法信号     0.9711    -0.0089
+    7       非法信号     0.9714    -0.0086
+    8       非法信号     0.9711    -0.0089
+    9       非法信号     0.9714    -0.0086
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9196)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9711
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9708    -0.0092
+    1       非法信号     0.9706    -0.0094
+    2       非法信号     0.9707    -0.0093
+    3       非法信号     0.9709    -0.0091
+    4       非法信号     0.9708    -0.0092
+    5       非法信号     0.9710    -0.0089
+    6       非法信号     0.9713    -0.0087
+    7       非法信号     0.9711    -0.0089
+    8       非法信号     0.9710    -0.0090
+    9       非法信号     0.9712    -0.0088
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/noise/noise_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9196)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/noise/noise_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9689
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9688    -0.0112
+    1       非法信号     0.9681    -0.0119
+    2       非法信号     0.9688    -0.0112
+    3       非法信号     0.9690    -0.0110
+    4       非法信号     0.9692    -0.0108
+    5       非法信号     0.9688    -0.0112
+    6       非法信号     0.9696    -0.0104
+    7       非法信号     0.9691    -0.0109
+    8       非法信号     0.9687    -0.0113
+    9       非法信号     0.9684    -0.0116
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/pager/pager_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9196)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/pager/pager_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9694
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9682    -0.0118
+    1       非法信号     0.9688    -0.0112
+    2       非法信号     0.9694    -0.0106
+    3       非法信号     0.9693    -0.0107
+    4       非法信号     0.9703    -0.0097
+    5       非法信号     0.9694    -0.0106
+    6       非法信号     0.9693    -0.0107
+    7       非法信号     0.9700    -0.0100
+    8       非法信号     0.9704    -0.0096
+    9       非法信号     0.9697    -0.0103
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/FM_broadcast/FM_broadcast_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/NOAA_weather_first.npz
+识别阈值: 0.9800 (推荐: 0.9196)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/FM_broadcast/FM_broadcast_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9551
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9642    -0.0158
+    1       非法信号     0.9576    -0.0224
+    2       非法信号     0.8595    -0.1205
+    3       非法信号     0.8394    -0.1406
+    4       非法信号     0.9523    -0.0277
+    5       非法信号     0.9402    -0.0398
+    6       非法信号     0.8987    -0.0813
+    7       非法信号     0.8914    -0.0886
+    8       非法信号     0.9235    -0.0565
+    9       非法信号     0.9442    -0.0358
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --output_path templates_rtl/APRS_first.npz --augment_passes 5 --max_samples 20000
+设备: cuda
+加载特征提取器: checkpoints/best_extractor.pt
+特征提取器加载完毕 (参数已冻结)
+加载Link11样本: (12500, 2048), dtype=complex64
+提取嵌入 (TTA×5)...
+提取嵌入: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 196/196 [00:50<00:00,  3.88it/s]
+
+=== Link11 模板统计 ===
+样本数量:    12500
+嵌入维度:    128
+均值→自身相似度分布: mean=0.9857, std=0.1023, min=0.0424, max=0.9999
+推荐识别阈值: sim >= 0.7810  (均值 - 2σ, 约95%覆盖率)
+
+模板已保存: templates_rtl/APRS_first.npz
+推荐识别阈值: 0.7810
+
+下一步: 运行 scripts/identify.py --signal <未知信号> 进行识别
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_second_half_segments.npy --template templates_rtl/APRS_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/APRS_first.npz
+识别阈值: 0.9800 (推荐: 0.7810)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   400 条 (100.0%)
+  非法信号: 0 条 (0.0%)
+  平均相似度: 0.9999
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0     Link11     0.9999    +0.0199
+    1     Link11     0.9998    +0.0198
+    2     Link11     0.9999    +0.0199
+    3     Link11     0.9999    +0.0199
+    4     Link11     0.9999    +0.0199
+    5     Link11     0.9999    +0.0199
+    6     Link11     0.9999    +0.0199
+    7     Link11     0.9999    +0.0199
+    8     Link11     0.9999    +0.0199
+    9     Link11     0.9999    +0.0199
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy --template templates_rtl/APRS_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/APRS_first.npz
+识别阈值: 0.9800 (推荐: 0.7810)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   400 条 (100.0%)
+  非法信号: 0 条 (0.0%)
+  平均相似度: 0.9993
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0     Link11     0.9993    +0.0193
+    1     Link11     0.9993    +0.0193
+    2     Link11     0.9993    +0.0193
+    3     Link11     0.9993    +0.0193
+    4     Link11     0.9993    +0.0193
+    5     Link11     0.9993    +0.0193
+    6     Link11     0.9993    +0.0193
+    7     Link11     0.9993    +0.0193
+    8     Link11     0.9993    +0.0193
+    9     Link11     0.9993    +0.0193
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_first_half_segments.npy --output_path templates_rtl/ISM_sensors_first.npz --augment_passes 5 --max_samples 20000
+设备: cuda
+加载特征提取器: checkpoints/best_extractor.pt
+特征提取器加载完毕 (参数已冻结)
+加载Link11样本: (12500, 2048), dtype=complex64
+提取嵌入 (TTA×5)...
+提取嵌入: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 196/196 [00:50<00:00,  3.91it/s]
+
+=== Link11 模板统计 ===
+样本数量:    12500
+嵌入维度:    128
+均值→自身相似度分布: mean=0.9969, std=0.0421, min=0.0812, max=1.0000
+推荐识别阈值: sim >= 0.9126  (均值 - 2σ, 约95%覆盖率)
+
+模板已保存: templates_rtl/ISM_sensors_first.npz
+推荐识别阈值: 0.9126
+
+下一步: 运行 scripts/identify.py --signal <未知信号> 进行识别
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy --template templates_rtl/APRS_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.78 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/APRS_first.npz
+识别阈值: 0.7800 (推荐: 0.7810)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   400 条 (100.0%)
+  非法信号: 0 条 (0.0%)
+  平均相似度: 0.9993
+  阈值: 0.7800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0     Link11     0.9993    +0.2193
+    1     Link11     0.9993    +0.2193
+    2     Link11     0.9993    +0.2193
+    3     Link11     0.9993    +0.2193
+    4     Link11     0.9993    +0.2193
+    5     Link11     0.9993    +0.2193
+    6     Link11     0.9993    +0.2193
+    7     Link11     0.9993    +0.2193
+    8     Link11     0.9993    +0.2193
+    9     Link11     0.9993    +0.2193
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/ISM_sensors_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/ISM_sensors_first.npz
+识别阈值: 0.9800 (推荐: 0.9126)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   400 条 (100.0%)
+  非法信号: 0 条 (0.0%)
+  平均相似度: 0.9993
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0     Link11     0.9990    +0.0190
+    1     Link11     0.9994    +0.0194
+    2     Link11     0.9995    +0.0195
+    3     Link11     0.9994    +0.0194
+    4     Link11     0.9993    +0.0193
+    5     Link11     0.9992    +0.0192
+    6     Link11     0.9995    +0.0195
+    7     Link11     0.9996    +0.0196
+    8     Link11     0.9993    +0.0193
+    9     Link11     0.9993    +0.0193
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_first_half_segments.npy --output_path templates_rtl/FRS_GMRS_first.npz --augment_passes 5 --max_samples 20000
+设备: cuda
+加载特征提取器: checkpoints/best_extractor.pt
+特征提取器加载完毕 (参数已冻结)
+加载Link11样本: (12500, 2048), dtype=complex64
+提取嵌入 (TTA×5)...
+提取嵌入: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 196/196 [00:50<00:00,  3.88it/s]
+
+=== Link11 模板统计 ===
+样本数量:    12500
+嵌入维度:    128
+均值→自身相似度分布: mean=0.9983, std=0.0231, min=0.6449, max=1.0000
+推荐识别阈值: sim >= 0.9521  (均值 - 2σ, 约95%覆盖率)
+
+模板已保存: templates_rtl/FRS_GMRS_first.npz
+推荐识别阈值: 0.9521
+
+下一步: 运行 scripts/identify.py --signal <未知信号> 进行识别
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/FRS_GMRS_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/FRS_GMRS_first.npz
+识别阈值: 0.9800 (推荐: 0.9521)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   400 条 (100.0%)
+  非法信号: 0 条 (0.0%)
+  平均相似度: 0.9994
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0     Link11     0.9990    +0.0190
+    1     Link11     0.9996    +0.0196
+    2     Link11     0.9997    +0.0197
+    3     Link11     0.9995    +0.0195
+    4     Link11     0.9993    +0.0193
+    5     Link11     0.9993    +0.0193
+    6     Link11     0.9997    +0.0197
+    7     Link11     0.9997    +0.0197
+    8     Link11     0.9994    +0.0194
+    9     Link11     0.9994    +0.0194
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/pager/pager_first_half_segments.npy --output_path templates_rtl/pager_first.npz --augment_passes 5 --max_samples 20000
+设备: cuda
+加载特征提取器: checkpoints/best_extractor.pt
+特征提取器加载完毕 (参数已冻结)
+加载Link11样本: (12500, 2048), dtype=complex64
+提取嵌入 (TTA×5)...
+提取嵌入: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 196/196 [00:50<00:00,  3.87it/s]
+
+=== Link11 模板统计 ===
+样本数量:    12500
+嵌入维度:    128
+均值→自身相似度分布: mean=0.9997, std=0.0006, min=0.9949, max=1.0000
+推荐识别阈值: sim >= 0.9985  (均值 - 2σ, 约95%覆盖率)
+
+模板已保存: templates_rtl/pager_first.npz
+推荐识别阈值: 0.9985
+
+下一步: 运行 scripts/identify.py --signal <未知信号> 进行识别
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/pager_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/pager_first.npz
+识别阈值: 0.9800 (推荐: 0.9985)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   400 条 (100.0%)
+  非法信号: 0 条 (0.0%)
+  平均相似度: 0.9999
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0     Link11     0.9997    +0.0197
+    1     Link11     1.0000    +0.0199
+    2     Link11     1.0000    +0.0200
+    3     Link11     0.9999    +0.0199
+    4     Link11     0.9999    +0.0199
+    5     Link11     0.9999    +0.0199
+    6     Link11     1.0000    +0.0200
+    7     Link11     1.0000    +0.0200
+    8     Link11     0.9999    +0.0199
+    9     Link11     0.9999    +0.0199
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/FM_broadcast/FM_broadcast_first_half_segments.npy --output_path templates_rtl/FM_broadcast_first.npz --augment_passes 5 --max_samples 20000
+设备: cuda
+加载特征提取器: checkpoints/best_extractor.pt
+特征提取器加载完毕 (参数已冻结)
+加载Link11样本: (20000, 2048), dtype=complex64
+提取嵌入 (TTA×5)...
+提取嵌入: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 313/313 [01:19<00:00,  3.93it/s]
+
+=== Link11 模板统计 ===
+样本数量:    20000
+嵌入维度:    128
+均值→自身相似度分布: mean=0.9994, std=0.0010, min=0.9836, max=1.0000
+推荐识别阈值: sim >= 0.9975  (均值 - 2σ, 约95%覆盖率)
+
+模板已保存: templates_rtl/FM_broadcast_first.npz
+推荐识别阈值: 0.9975
+
+下一步: 运行 scripts/identify.py --signal <未知信号> 进行识别
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/FM_broadcast_first.npz
+识别阈值: 0.9800 (推荐: 0.9975)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   400 条 (100.0%)
+  非法信号: 0 条 (0.0%)
+  平均相似度: 0.9858
+  阈值: 0.9800
+
+前10条结果:
+  idx         决策        相似度     margin
+    0     Link11     0.9856    +0.0056
+    1     Link11     0.9859    +0.0059
+    2     Link11     0.9859    +0.0059
+    3     Link11     0.9857    +0.0057
+    4     Link11     0.9856    +0.0056
+    5     Link11     0.9858    +0.0058
+    6     Link11     0.9863    +0.0063
+    7     Link11     0.9859    +0.0059
+    8     Link11     0.9858    +0.0058
+    9     Link11     0.9854    +0.0054
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/FM_broadcast_first.npz
+识别阈值: 0.9900 (推荐: 0.9975)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9858
+  阈值: 0.9900
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9856    -0.0044
+    1       非法信号     0.9859    -0.0041
+    2       非法信号     0.9859    -0.0041
+    3       非法信号     0.9857    -0.0043
+    4       非法信号     0.9856    -0.0044
+    5       非法信号     0.9858    -0.0042
+    6       非法信号     0.9863    -0.0037
+    7       非法信号     0.9859    -0.0041
+    8       非法信号     0.9858    -0.0042
+    9       非法信号     0.9854    -0.0046
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/FM_broadcast_first.npz
+识别阈值: 0.9900 (推荐: 0.9975)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9036
+  阈值: 0.9900
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.6572    -0.3328
+    1       非法信号     0.9427    -0.0473
+    2       非法信号     0.9513    -0.0387
+    3       非法信号     0.9663    -0.0237
+    4       非法信号     0.8551    -0.1349
+    5       非法信号     0.8611    -0.1289
+    6       非法信号     0.8644    -0.1256
+    7       非法信号     0.8456    -0.1444
+    8       非法信号     0.9266    -0.0634
+    9       非法信号     0.8732    -0.1168
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/FM_broadcast_first.npz
+识别阈值: 0.9900 (推荐: 0.9975)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9854
+  阈值: 0.9900
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9855    -0.0045
+    1       非法信号     0.9855    -0.0045
+    2       非法信号     0.9853    -0.0047
+    3       非法信号     0.9856    -0.0044
+    4       非法信号     0.9854    -0.0046
+    5       非法信号     0.9856    -0.0044
+    6       非法信号     0.9853    -0.0047
+    7       非法信号     0.9855    -0.0045
+    8       非法信号     0.9853    -0.0047
+    9       非法信号     0.9853    -0.0047
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/FM_broadcast_first.npz
+识别阈值: 0.9900 (推荐: 0.9975)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9854
+  阈值: 0.9900
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9854    -0.0046
+    1       非法信号     0.9852    -0.0048
+    2       非法信号     0.9855    -0.0045
+    3       非法信号     0.9852    -0.0048
+    4       非法信号     0.9853    -0.0047
+    5       非法信号     0.9854    -0.0046
+    6       非法信号     0.9853    -0.0047
+    7       非法信号     0.9854    -0.0046
+    8       非法信号     0.9852    -0.0048
+    9       非法信号     0.9855    -0.0045
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/noise/noise_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/FM_broadcast_first.npz
+识别阈值: 0.9900 (推荐: 0.9975)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/noise/noise_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9860
+  阈值: 0.9900
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9860    -0.0040
+    1       非法信号     0.9854    -0.0046
+    2       非法信号     0.9860    -0.0040
+    3       非法信号     0.9851    -0.0049
+    4       非法信号     0.9864    -0.0036
+    5       非法信号     0.9860    -0.0040
+    6       非法信号     0.9870    -0.0030
+    7       非法信号     0.9856    -0.0044
+    8       非法信号     0.9852    -0.0048
+    9       非法信号     0.9855    -0.0045
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/pager/pager_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/FM_broadcast_first.npz
+识别阈值: 0.9900 (推荐: 0.9975)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/pager/pager_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   0 条 (0.0%)
+  非法信号: 400 条 (100.0%)
+  平均相似度: 0.9858
+  阈值: 0.9900
+
+前10条结果:
+  idx         决策        相似度     margin
+    0       非法信号     0.9860    -0.0040
+    1       非法信号     0.9862    -0.0038
+    2       非法信号     0.9861    -0.0039
+    3       非法信号     0.9855    -0.0045
+    4       非法信号     0.9862    -0.0038
+    5       非法信号     0.9850    -0.0050
+    6       非法信号     0.9858    -0.0042
+    7       非法信号     0.9859    -0.0041
+    8       非法信号     0.9859    -0.0041
+    9       非法信号     0.9860    -0.0040
+
+完整结果已保存: results_rtl.json
+
+(pytorch1_12_1) E:\XieYiR\Recongition2\signal_recognition_project\signal_recognition>python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/FM_broadcast/FM_broadcast_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+加载特征提取器: checkpoints/best_extractor.pt
+加载Link11模板: templates_rtl/FM_broadcast_first.npz
+识别阈值: 0.9900 (推荐: 0.9975)
+
+识别信号文件: E:/XieYiR/rtl_ml/rtl_re/FM_broadcast/FM_broadcast_second_half_segments.npy
+加载Link11样本: (400, 2048), dtype=complex64
+
+==================================================
+识别结果统计 (400 条信号):
+  Link11:   280 条 (70.0%)
+  非法信号: 120 条 (30.0%)
+  平均相似度: 0.9863
+  阈值: 0.9900
+
+前10条结果:
+  idx         决策        相似度     margin
+    0     Link11     0.9944    +0.0044
+    1     Link11     0.9904    +0.0004
+    2       非法信号     0.9032    -0.0868
+    3       非法信号     0.8856    -0.1044
+    4       非法信号     0.9876    -0.0024
+    5       非法信号     0.9746    -0.0154
+    6       非法信号     0.9394    -0.0506
+    7       非法信号     0.9322    -0.0578
+    8       非法信号     0.9584    -0.0316
+    9       非法信号     0.9763    -0.0137
+
+完整结果已保存: results_rtl.json

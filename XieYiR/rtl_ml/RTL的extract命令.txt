@@ -1,0 +1,60 @@
+python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_first_half_segments.npy --output_path templates_rtl/NOAA_weather_first.npz --augment_passes 5 --max_samples 800
+
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/noise/noise_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/pager/pager_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/FM_broadcast/FM_broadcast_second_half_segments.npy --template templates_rtl/NOAA_weather_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+
+
+============================================================================================================================================================
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_second_half_segments.npy --template templates_rtl/APRS_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.78 --output results_rtl.json
+
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy --template templates_rtl/APRS_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.78 --output results_rtl.json
+
+
+python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --output_path templates_rtl/APRS_first.npz --augment_passes 5 --max_samples 20000
+
+============================================================================================================================================================
+python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_first_half_segments.npy --output_path templates_rtl/ISM_sensors_first.npz --augment_passes 5 --max_samples 20000
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/ISM_sensors_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+============================================================================================================================================================
+
+python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_first_half_segments.npy --output_path templates_rtl/FRS_GMRS_first.npz --augment_passes 5 --max_samples 20000
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/FRS_GMRS_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+
+============================================================================================================================================================
+
+python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/pager/pager_first_half_segments.npy --output_path templates_rtl/pager_first.npz --augment_passes 5 --max_samples 20000
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/pager_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.98 --output results_rtl.json
+
+============================================================================================================================================================
+
+python register_template.py --signal_path E:/XieYiR/rtl_ml/rtl_re/FM_broadcast/FM_broadcast_first_half_segments.npy --output_path templates_rtl/FM_broadcast_first.npz --augment_passes 5 --max_samples 20000
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/APRS/APRS_first_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/NOAA_weather/NOAA_weather_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/ISM_sensors/ISM_sensors_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/FRS_GMRS/FRS_GMRS_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/noise/noise_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/pager/pager_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json
+
+python identify.py --signal E:/XieYiR/rtl_ml/rtl_re/FM_broadcast/FM_broadcast_second_half_segments.npy --template templates_rtl/FM_broadcast_first.npz --model_path checkpoints/best_extractor.pt --threshold 0.99 --output results_rtl.json

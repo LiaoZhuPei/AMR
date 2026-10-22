@@ -1,0 +1,83 @@
+2026-08-24 16:50:06,460 [INFO] 
+=======================================================
+2026-08-24 16:50:06,460 [INFO]   Open-Set Link11 Detection Results
+2026-08-24 16:50:06,461 [INFO] =======================================================
+2026-08-24 16:50:06,461 [INFO]   TPR (Link11检测率)       : 1.0000
+2026-08-24 16:50:06,461 [INFO]   FPR_known  (已知类虚警)  : 0.0775
+2026-08-24 16:50:06,461 [INFO]   FPR_unknown(未知类虚警)  : 0.0980  ← 开放集核心
+2026-08-24 16:50:06,462 [INFO]   AUROC (all)              : 1.0000
+2026-08-24 16:50:06,462 [INFO]   AUROC (vs unknown only)  : 1.0000
+2026-08-24 16:50:06,463 [INFO]   样本数: Link11=100, KnownNeg=400, UnknownNeg=1000
+2026-08-24 16:50:06,471 [INFO] 
+  SNR分层:
+            TPR  FPR_known  FPR_unknown
+SNR                                    
+-0.016896   NaN   0.000000          NaN
+-0.009188   NaN   0.000000          NaN
+ 0.009139   NaN   0.000000          NaN
+ 0.042498   NaN   0.000000          NaN
+ 0.132584   NaN   0.000000          NaN
+ 0.188376   NaN   0.000000          NaN
+ 0.287659   NaN   0.000000          NaN
+ 1.566654   NaN   0.000000          NaN
+ 6.638480   NaN        NaN     0.000000
+ 6.650616   NaN        NaN     0.000000
+ 6.663578   NaN   0.285714          NaN
+ 6.664016   NaN   0.250000          NaN
+ 6.665846   NaN   0.285714          NaN
+...
+pager             False                  0.010  100    0.990
+FM_broadcast      False                  0.000  100    1.000
+2026-08-24 16:50:06,473 [INFO] =======================================================
+
+Output is truncated. View as a scrollable element or open in a text editor. Adjust cell output settings...
+
+
+TPR (Link11检测率)       : 1.0000
+FPR_known  (已知类虚警)  : 0.0775
+FPR_unknown(未知类虚警)  : 0.0980  ← 开放集核心
+AUROC (all)              : 1.0000
+AUROC (vs unknown only)  : 1.0000
+样本数: Link11=100, KnownNeg=400, UnknownNeg=1000
+  各类别判断情况:
+              is_Link11  judged_as_Link11_rate    N  correct
+mode                                                        
+NOAA_weather       True                  1.000  100    1.000
+APRS              False                  0.260  100    0.740
+noise             False                  0.154  500    0.846
+FRS_GMRS          False                  0.042  500    0.958
+ISM_sensors       False                  0.040  100    0.960
+pager             False                  0.010  100    0.990
+FM_broadcast      False                  0.000  100    1.000
+
+
+
+              is_Link11  judged_as_Link11_rate    N  correct
+mode                                                        
+ISM_sensors        True                  0.940  100    0.940
+FRS_GMRS          False                  0.924  500    0.076
+noise             False                  0.284  500    0.716
+pager             False                  0.280  100    0.720
+APRS              False                  0.210  100    0.790
+FM_broadcast      False                  0.000  100    1.000
+NOAA_weather      False                  0.000  100    1.000
+
+              is_Link11  judged_as_Link11_rate    N  correct
+mode                                                        
+FM_broadcast       True                  1.000  100    1.000
+pager             False                  0.110  100    0.890
+APRS              False                  0.070  100    0.930
+noise             False                  0.060  500    0.940
+NOAA_weather      False                  0.050  100    0.950
+FRS_GMRS          False                  0.038  500    0.962
+ISM_sensors       False                  0.010  100    0.990
+
+              is_Link11  judged_as_Link11_rate    N  correct
+mode                                                        
+pager              True                  0.620  100    0.620
+noise             False                  0.250  500    0.750
+ISM_sensors       False                  0.160  100    0.840
+FRS_GMRS          False                  0.144  500    0.856
+APRS              False                  0.030  100    0.970
+FM_broadcast      False                  0.000  100    1.000
+NOAA_weather      False                  0.000  100    1.000
