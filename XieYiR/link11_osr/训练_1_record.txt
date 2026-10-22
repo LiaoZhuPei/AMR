@@ -1,0 +1,137 @@
+D:\anaconda3\envs\py_transformers2\python.exe E:\XieYiR\link11_osr\train.py 
+[Device] 使用 GPU: NVIDIA GeForce RTX 3050
+
+[模式] 使用真实数据
+10:28:13 [INFO] src.dataset: 正在加载: data/raw\dataset_panoradio_hf.npy  (首次约需 10~30s)
+10:28:14 [INFO] src.dataset: 已加载: shape=(172800, 2048), dtype=complex128
+10:28:15 [INFO] src.dataset: tags.csv 已加载: 172800 行 | mode 类别: ['am', 'dominoex11', 'fax', 'lsb', 'morse', 'mt63_1000', 'navtex', 'olivia16_1000', 'olivia16_500', 'olivia32_1000', 'olivia8_250', 'psk31', 'psk63', 'qpsk31', 'rtty100_850', 'rtty45_170', 'rtty50_170', 'usb']
+10:28:15 [INFO] src.dataset: [TRAIN]  47040 样本 | 正类(Link11): 6720  负类: 40320
+10:28:15 [INFO] src.dataset: [VAL  ]  10080 样本 | 正类(Link11): 1440  负类: 8640
+10:28:15 [INFO] src.dataset: [TEST ]  18720 样本 | 正类(Link11): 1440  负类: 17280
+
+[模型] 骨干: cnn2d | 特征维度: 128 | 参数量: 655,072
+
+============================================================
+  开始训练 | 设备: cuda
+  总 Epochs: 50 | Warm-up: 5
+============================================================
+
+10:28:38 [INFO] src.trainer: [Warm-up] Epoch 001 | Loss: 0.3467
+10:28:59 [INFO] src.trainer: [Warm-up] Epoch 002 | Loss: 0.3299
+10:29:20 [INFO] src.trainer: [Warm-up] Epoch 003 | Loss: 0.3276
+10:29:42 [INFO] src.trainer: [Warm-up] Epoch 004 | Loss: 0.3252
+
+[Trainer] Warm-up 完成，初始化 SVDD 球心...
+10:30:03 [INFO] src.trainer: [Warm-up] Epoch 005 | Loss: 0.3258
+[SVDD] Center initialized | norm=96.9777
+10:30:38 [INFO] src.trainer: [Val] dist_mean: pos=2.6198  neg=6.2508  gap=3.6310
+Epoch 006/50 | Loss: 80.0171 | Val AUROC: 0.9405 | LR: 0.000999 | Time: 142.3s
+10:30:38 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9405)
+Epoch 007/50 | Loss: 4.1131 | Val AUROC: 0.9897 | LR: 0.000996 | Time: 167.0s
+10:31:03 [INFO] src.trainer: [Val] dist_mean: pos=1.5150  neg=4.2804  gap=2.7654
+10:31:03 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9897)
+10:31:28 [INFO] src.trainer: [Val] dist_mean: pos=0.9674  neg=3.5609  gap=2.5935
+Epoch 008/50 | Loss: 3.2773 | Val AUROC: 0.9855 | LR: 0.000991 | Time: 191.9s
+Epoch 009/50 | Loss: 2.5747 | Val AUROC: 0.9934 | LR: 0.000984 | Time: 216.7s
+10:31:53 [INFO] src.trainer: [Val] dist_mean: pos=2.0565  neg=4.6358  gap=2.5793
+10:31:53 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9934)
+10:32:18 [INFO] src.trainer: [Val] dist_mean: pos=2.7627  neg=5.1622  gap=2.3995
+10:32:18 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9952)
+Epoch 010/50 | Loss: 2.6145 | Val AUROC: 0.9952 | LR: 0.000976 | Time: 241.5s
+10:32:43 [INFO] src.trainer: [Val] dist_mean: pos=0.7918  neg=3.7740  gap=2.9821
+Epoch 011/50 | Loss: 2.5552 | Val AUROC: 0.9390 | LR: 0.000965 | Time: 266.5s
+Epoch 012/50 | Loss: 2.0910 | Val AUROC: 0.9878 | LR: 0.000952 | Time: 291.6s
+10:33:08 [INFO] src.trainer: [Val] dist_mean: pos=1.4101  neg=3.6654  gap=2.2553
+Epoch 013/50 | Loss: 2.0860 | Val AUROC: 0.9956 | LR: 0.000938 | Time: 316.4s
+10:33:33 [INFO] src.trainer: [Val] dist_mean: pos=1.1084  neg=3.5385  gap=2.4301
+10:33:33 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9956)
+10:33:57 [INFO] src.trainer: [Val] dist_mean: pos=1.1235  neg=3.5793  gap=2.4558
+Epoch 014/50 | Loss: 1.7250 | Val AUROC: 0.9911 | LR: 0.000922 | Time: 341.2s
+10:34:22 [INFO] src.trainer: [Val] dist_mean: pos=0.6753  neg=3.5924  gap=2.9171
+Epoch 015/50 | Loss: 2.1248 | Val AUROC: 0.9880 | LR: 0.000905 | Time: 366.0s
+Epoch 016/50 | Loss: 1.7472 | Val AUROC: 0.9906 | LR: 0.000885 | Time: 390.7s
+10:34:47 [INFO] src.trainer: [Val] dist_mean: pos=0.6832  neg=3.1695  gap=2.4863
+Epoch 017/50 | Loss: 1.6778 | Val AUROC: 0.9915 | LR: 0.000864 | Time: 415.6s
+10:35:12 [INFO] src.trainer: [Val] dist_mean: pos=0.7080  neg=3.5515  gap=2.8435
+Epoch 018/50 | Loss: 1.6621 | Val AUROC: 0.9732 | LR: 0.000842 | Time: 440.3s
+10:35:36 [INFO] src.trainer: [Val] dist_mean: pos=0.7206  neg=2.5226  gap=1.8020
+Epoch 019/50 | Loss: 1.3255 | Val AUROC: 0.9037 | LR: 0.000819 | Time: 465.2s
+10:36:01 [INFO] src.trainer: [Val] dist_mean: pos=0.7894  neg=2.2100  gap=1.4206
+Epoch 020/50 | Loss: 1.1821 | Val AUROC: 0.9976 | LR: 0.000794 | Time: 490.0s
+10:36:26 [INFO] src.trainer: [Val] dist_mean: pos=0.4631  neg=2.9290  gap=2.4659
+10:36:26 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9976)
+10:36:51 [INFO] src.trainer: [Val] dist_mean: pos=0.4415  neg=2.8340  gap=2.3925
+Epoch 021/50 | Loss: 1.0750 | Val AUROC: 0.9619 | LR: 0.000768 | Time: 515.3s
+Epoch 022/50 | Loss: 0.9796 | Val AUROC: 0.9822 | LR: 0.000741 | Time: 540.2s
+10:37:16 [INFO] src.trainer: [Val] dist_mean: pos=0.5532  neg=3.0840  gap=2.5308
+Epoch 023/50 | Loss: 0.9155 | Val AUROC: 0.9879 | LR: 0.000713 | Time: 565.1s
+10:37:41 [INFO] src.trainer: [Val] dist_mean: pos=0.5664  neg=2.8406  gap=2.2742
+10:38:06 [INFO] src.trainer: [Val] dist_mean: pos=0.7776  neg=2.6292  gap=1.8516
+Epoch 024/50 | Loss: 0.8919 | Val AUROC: 0.9539 | LR: 0.000684 | Time: 589.5s
+Epoch 025/50 | Loss: 0.8272 | Val AUROC: 0.9965 | LR: 0.000655 | Time: 613.4s
+10:38:30 [INFO] src.trainer: [Val] dist_mean: pos=0.9221  neg=3.8378  gap=2.9158
+Epoch 026/50 | Loss: 0.8500 | Val AUROC: 0.9967 | LR: 0.000624 | Time: 637.4s
+10:38:54 [INFO] src.trainer: [Val] dist_mean: pos=0.3352  neg=3.2275  gap=2.8922
+10:39:18 [INFO] src.trainer: [Val] dist_mean: pos=0.6178  neg=2.6977  gap=2.0799
+Epoch 027/50 | Loss: 0.7360 | Val AUROC: 0.9949 | LR: 0.000594 | Time: 662.0s
+10:39:43 [INFO] src.trainer: [Val] dist_mean: pos=0.4475  neg=3.0171  gap=2.5695
+Epoch 028/50 | Loss: 0.6939 | Val AUROC: 0.9983 | LR: 0.000563 | Time: 686.6s
+10:39:43 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9983)
+Epoch 029/50 | Loss: 0.6520 | Val AUROC: 0.9969 | LR: 0.000531 | Time: 711.5s
+10:40:08 [INFO] src.trainer: [Val] dist_mean: pos=0.4229  neg=2.8521  gap=2.4291
+10:40:33 [INFO] src.trainer: [Val] dist_mean: pos=0.4390  neg=2.4636  gap=2.0246
+10:40:33 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9988)
+Epoch 030/50 | Loss: 0.6051 | Val AUROC: 0.9988 | LR: 0.000500 | Time: 736.4s
+Epoch 031/50 | Loss: 0.5571 | Val AUROC: 0.9953 | LR: 0.000469 | Time: 761.2s
+10:40:57 [INFO] src.trainer: [Val] dist_mean: pos=0.3216  neg=2.6995  gap=2.3779
+Epoch 032/50 | Loss: 0.5952 | Val AUROC: 0.9948 | LR: 0.000437 | Time: 786.1s
+10:41:22 [INFO] src.trainer: [Val] dist_mean: pos=0.3362  neg=2.3921  gap=2.0559
+10:41:47 [INFO] src.trainer: [Val] dist_mean: pos=0.9340  neg=3.0200  gap=2.0860
+Epoch 033/50 | Loss: 0.5161 | Val AUROC: 0.9968 | LR: 0.000406 | Time: 811.1s
+10:42:12 [INFO] src.trainer: [Val] dist_mean: pos=0.2425  neg=2.6010  gap=2.3585
+Epoch 034/50 | Loss: 0.4787 | Val AUROC: 0.9967 | LR: 0.000376 | Time: 835.9s
+Epoch 035/50 | Loss: 0.4681 | Val AUROC: 0.9990 | LR: 0.000345 | Time: 860.6s
+10:42:37 [INFO] src.trainer: [Val] dist_mean: pos=0.3127  neg=2.7229  gap=2.4101
+10:42:37 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9990)
+Epoch 036/50 | Loss: 0.3992 | Val AUROC: 0.9992 | LR: 0.000316 | Time: 885.3s
+10:43:01 [INFO] src.trainer: [Val] dist_mean: pos=0.4453  neg=2.6685  gap=2.2232
+10:43:01 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9992)
+10:43:26 [INFO] src.trainer: [Val] dist_mean: pos=0.6262  neg=2.5161  gap=1.8899
+Epoch 037/50 | Loss: 0.3823 | Val AUROC: 0.9873 | LR: 0.000287 | Time: 910.0s
+10:43:51 [INFO] src.trainer: [Val] dist_mean: pos=0.4074  neg=2.3193  gap=1.9119
+Epoch 038/50 | Loss: 0.3885 | Val AUROC: 0.9980 | LR: 0.000259 | Time: 934.8s
+10:44:16 [INFO] src.trainer: [Val] dist_mean: pos=0.2170  neg=2.5985  gap=2.3815
+Epoch 039/50 | Loss: 0.3347 | Val AUROC: 0.9992 | LR: 0.000232 | Time: 960.2s
+10:44:42 [INFO] src.trainer: [Val] dist_mean: pos=0.2592  neg=2.6063  gap=2.3471
+Epoch 040/50 | Loss: 0.3144 | Val AUROC: 0.9982 | LR: 0.000206 | Time: 985.6s
+10:45:07 [INFO] src.trainer: [Val] dist_mean: pos=0.2273  neg=2.2754  gap=2.0481
+Epoch 041/50 | Loss: 0.3166 | Val AUROC: 0.9994 | LR: 0.000181 | Time: 1011.0s
+10:45:07 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9994)
+10:45:33 [INFO] src.trainer: [Val] dist_mean: pos=0.2430  neg=2.4550  gap=2.2120
+Epoch 042/50 | Loss: 0.2989 | Val AUROC: 0.9993 | LR: 0.000158 | Time: 1036.4s
+Epoch 043/50 | Loss: 0.2611 | Val AUROC: 0.9995 | LR: 0.000136 | Time: 1061.7s
+10:45:58 [INFO] src.trainer: [Val] dist_mean: pos=0.2787  neg=2.6791  gap=2.4003
+10:45:58 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9995)
+10:46:24 [INFO] src.trainer: [Val] dist_mean: pos=0.3033  neg=2.4201  gap=2.1168
+Epoch 044/50 | Loss: 0.2507 | Val AUROC: 0.9987 | LR: 0.000115 | Time: 1087.4s
+Epoch 045/50 | Loss: 0.2426 | Val AUROC: 0.9995 | LR: 0.000095 | Time: 1119.4s
+10:46:56 [INFO] src.trainer: [Val] dist_mean: pos=0.2347  neg=2.5692  gap=2.3345
+10:47:30 [INFO] src.trainer: [Val] dist_mean: pos=0.2320  neg=2.2074  gap=1.9754
+Epoch 046/50 | Loss: 0.2166 | Val AUROC: 0.9985 | LR: 0.000078 | Time: 1153.8s
+10:48:09 [INFO] src.trainer: [Val] dist_mean: pos=0.2846  neg=2.6933  gap=2.4086
+Epoch 047/50 | Loss: 0.2068 | Val AUROC: 0.9995 | LR: 0.000062 | Time: 1193.1s
+10:48:43 [INFO] src.trainer: [Val] dist_mean: pos=0.2333  neg=2.5318  gap=2.2985
+Epoch 048/50 | Loss: 0.1975 | Val AUROC: 0.9994 | LR: 0.000048 | Time: 1227.2s
+10:49:23 [INFO] src.trainer: [Val] dist_mean: pos=0.3316  neg=2.6276  gap=2.2961
+Epoch 049/50 | Loss: 0.1874 | Val AUROC: 0.9996 | LR: 0.000035 | Time: 1266.9s
+10:49:23 [INFO] src.trainer: [Checkpoint] 最优模型已保存 → models\best_model.pth (AUROC=0.9996)
+Epoch 050/50 | Loss: 0.1847 | Val AUROC: 0.9994 | LR: 0.000024 | Time: 1294.6s
+
+============================================================
+  训练完成 | 最佳 Val AUROC: 0.9996
+============================================================
+
+
+训练完成！运行以下命令进行评估：
+  python evaluate.py --config configs/config.yaml 
+10:49:51 [INFO] src.trainer: [Val] dist_mean: pos=0.1948  neg=2.4236  gap=2.2288

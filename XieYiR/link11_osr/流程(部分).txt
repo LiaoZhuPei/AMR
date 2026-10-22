@@ -1,0 +1,125 @@
+train.py
+【
+数据加载build_dataloaders
+来源：dataset.py
+
+数据加载与预处理模块
+
+数据集: Panoradio HF  (panoradio-sdr.de)
+  dataset_panoradio_hf.npy
+    shape = (172800, 2048)  dtype = complex64
+    每行 = 1 个信号样本，2048 个复数 IQ 点，fs=6000 Hz，时长≈341ms
+    功率归一化为 1，频偏 ±250 Hz，SNR: 25/20/15/10/5/0/-5/-10 dB
+
+  dataset_panoradio_hf_tags.csv
+    idx | mode          | snr
+    0   | morse         | 25
+    ...
+    9714| psk31         | 25
+
+18 种 mode（数据集原始名）:
+  morse, psk31, psk63, qpsk31,
+  rtty45_170, rtty50_170, rtty100_850,
+  olivia8_250, olivia16_500, olivia16_1000, olivia32_1000,
+  dominoex11, mt63_1000, navtex,
+  usb, lsb, am, fax
+
+config.yaml 中的简称 → 匹配规则（前缀匹配 mode 字段）:
+  "mt63_1000"  → target_class: "mt63_1000"
+  "RTTY"       → 匹配 rtty45_170 / rtty50_170 / rtty100_850
+  "SSB"        → 匹配 usb / lsb
+  "AM"         → 匹配 am
+  "PSK31"      → 匹配 psk31
+  "Morse"      → 匹配 morse
+  "Olivia"     → 匹配 olivia8_250 / olivia16_500 / …
+
+输出张量: (1, n_fft, time_frames)  float32 频谱图，单通道，供 CNN2D 使用
+
+数据加载
+【
+build_dataloaders -> train_loader, val_loader, test_loader
+
+   1.传入cfg，mode="train" -> PanoradioDataset -> train_ds
+   PanoradioDataset:
+   {
+     row_idx, label, cls_name <- self._index[idx]
+
+     依据row_idx读取单个样本iq: shape=(2048,) complex64
+
+     iq、n_fft（FFT 窗长）、hop_length（帧移（点数））、normalize（是否归一化到 [0,1]） -> iq_to_spectrogram（）
+ 
+     iq_to_spectrogram（）：复数 IQ 信号 → STFT 双边幅度频谱图（dB, fftshift 令0Hz居中）
+
+     -> spec: shape=(n_fft, time_frames), float32 ;  time_frames由Zxx得到，Zxx由scipy库内置函数stft得到
+
+     -> 增加通道维度得到x = (1, n_fft, time_frames)
+
+     -> 输出x, torch.tensor(label, dtype=torch.long), cls_name
+        （x:Tensor (1, n_fft, time_frames) float32 — 频谱图；label:Tensor scalar int64 — 1=Link11, 0=非Link11；cls_name : str — config 中的类别简称）
+    }
+    同理，由PanoradioDataset得到val_ds，test_ds
+    再分别输入 DataLoader
+
+】
+
+模型构建
+【
+DeepSVDDModel：
+1. 骨干网络 (CNN2D 或 CNN1D)：提取判别特征
+
+2. 可学习球心 `center` (不参与梯度下降，训练初期计算后固定)
+
+3. 推理时输出特征向量及到球心的距离
+
+forward:
+ 输入张量x (B, C, ...) -> backbone ->  feat: 特征向量 (B, feature_dim)
+
+ 其中bcakbone有两个取值：
+ 1）CNN2DBackbone；用于频谱图输入
+    输入：(B, 1, freq_bins, time_frames)
+    输出：(B, feature_dim)
+ 2）CNN1DBackbone：直接处理原始信号
+    数据通道维度存在不匹配的问题，暂不支持使用
+】
+
+训练
+【
+train()
+1.Warm-up
+开始时，epoch <= self.warm_up_epochs阶段：
+ {
+  得到train_loader中的x,labels,feat
+  -> 根据labels得到当前Batch布尔值Pos_mask，正样本为True，负样本为False
+  -> 计算当前Batch的正样本的特征平均值，并归一化 = proto
+  -> 将所有样本的特征也进行归一化 = feat_norm
+  -> 将proto作为正类中心，计算与feat_norm作内积，由于计算双方都经过归一化，因此这里的内积等效于余弦相似度，按列相加，即(B,D)->(B,) = logits
+     相似度越高，越接近1，代表与正类中心越靠近
+  -> BCE损失函数输入logits和labels,如果是正类labels=1，拉经该样本与proto的距离，如果是负类，则使得该样本与proto的距离加大
+ }
+ 预先调整权重，防止SVDD产生表征崩溃
+
+2.预热结束后，初始化SVDD球心（球心c：所有正常（正类）样本在特征空间中的均值（重心））
+  球心c一旦确定，在后续的正式训练中是绝对不能更新的（即它不是网络的可学习参数，而是一个常数）
+
+3.SVDD训练：
+对于每个批次,需要：
+x
+labels
+feat
+dist_sq( model.compute_distances(feat)每个样本到球心的欧氏距离平方 )
+pos_mask
+neg_mask
+{
+dist_sq_pos正样本的dist_sq
+dist_sq_neg负样本的dist_sq
+} -> 计算SVDD损失（svdd_loss_fn：正类聚拢到球心，负类推离球心） 
+对比损失（可选）：正对 (都是正类): 距离应小；负对 (一正一负): 距离应大于 margin
+若选择了对比损失，则为SVDD损失 + lambda_contrastive * 对比损失
+
+
+】
+
+
+
+
+】

@@ -1,0 +1,42 @@
+D:\anaconda3\envs\py_transformers2\python.exe E:\XieYiR\link11_osr\evaluate.py 
+10:51:17 [INFO] src.dataset: 正在加载: data/raw\dataset_panoradio_hf.npy  (首次约需 10~30s)
+[Device] 使用 GPU: NVIDIA GeForce RTX 3050
+10:51:18 [INFO] src.dataset: 已加载: shape=(172800, 2048), dtype=complex128
+10:51:18 [INFO] src.dataset: tags.csv 已加载: 172800 行 | mode 类别: ['am', 'dominoex11', 'fax', 'lsb', 'morse', 'mt63_1000', 'navtex', 'olivia16_1000', 'olivia16_500', 'olivia32_1000', 'olivia8_250', 'psk31', 'psk63', 'qpsk31', 'rtty100_850', 'rtty45_170', 'rtty50_170', 'usb']
+10:51:18 [INFO] src.dataset: [TRAIN]  47040 样本 | 正类(Link11): 6720  负类: 40320
+10:51:19 [INFO] src.dataset: [VAL  ]  10080 样本 | 正类(Link11): 1440  负类: 8640
+10:51:19 [INFO] src.dataset: [TEST ]  18720 样本 | 正类(Link11): 1440  负类: 17280
+[Evaluate] 模型已加载: models/best_model.pth
+
+[Step 1] 在验证集上提取特征...
+[Evaluator] 阈值校准完成: 1.1425 (策略: val_fpr)
+
+[Step 2] 在测试集上评估（含未知类）...
+
+============================================================
+  开放集识别评估报告
+============================================================
+  AUROC               : 0.9997
+  FPR@95TPR           : 0.0009
+  决策阈值             : 1.1425
+------------------------------------------------------------
+  [mt63_1000] 正确识别率 (TPR)  : 0.9465  ← 应接近 1.0
+  [已知负类] 正确拒识率      : 0.9988  ← 应接近 1.0
+  [未知负类] 开放集拒识率    : 0.9994  ← 关键指标，应接近 1.0
+============================================================
+
+E:\XieYiR\link11_osr\src\evaluator.py:283: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+[图表] 距离分布图已保存: results\distance_distribution.png
+[图表] ROC 曲线已保存: results\roc_curve.png
+[t-SNE] 正在计算 2000 个样本的 t-SNE...
+E:\XieYiR\link11_osr\src\evaluator.py:307: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+E:\XieYiR\link11_osr\src\evaluator.py:362: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+[图表] t-SNE 图已保存: results\tsne_features.png
+
+[输出] 所有图表已保存到 results/
+[输出] 指标已保存: results\metrics.json
+
+Process finished with exit code 0

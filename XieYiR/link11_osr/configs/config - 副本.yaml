@@ -1,0 +1,97 @@
+# ============================================================
+# Link11 开放集识别系统 - 统一配置文件
+# ============================================================
+
+# ---------- 数据配置 ----------
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  sample_rate: 8000          # 信号采样率 (Hz)，按实际数据调整
+  segment_duration: 1.0      # 每段时长 (秒)
+  overlap: 0.5               # 段间重叠比例
+
+  # 正类信号 (Link11 替代) — 对应 tags.csv 中的 mode 值
+  target_class: "mt63_1000"
+
+  # 已知负类 (训练时可见) — 前缀匹配: rtty→rtty45/50/100, ssb→usb+lsb
+  known_negatives:
+    - "rtty"   # 匹配 rtty45_170 / rtty50_170 / rtty100_850
+    - "ssb"    # 匹配 usb / lsb
+    - "am"     # 匹配 am
+
+  # 未知负类 (仅测试，训练不可见)
+  unknown_negatives:
+    - "psk31"   # 匹配 psk31
+    - "morse"   # 匹配 morse
+    - "olivia"  # 匹配 olivia8_250 / olivia16_500 / olivia16_1000 / olivia32_1000
+
+  # 数据集划分
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  random_seed: 42
+
+# ---------- 特征提取配置 ----------
+feature:
+  type: "spectrogram"        # 可选: spectrogram, mel_spectrogram, cwt
+  n_fft: 256
+  hop_length: 64
+  n_mels: 64                 # 仅 mel_spectrogram 使用
+  freq_bins: 129             # n_fft//2 + 1
+  time_frames: 128           # 每段的时间帧数
+  normalize: true            # 归一化到 [0,1]
+
+# ---------- 模型配置 ----------
+model:
+  backbone: "cnn2d"          # 可选: cnn1d, cnn2d, resnet（cnn2d=频谱图; cnn1d=原始信号）
+  feature_dim: 128           # 特征嵌入维度
+  # CNN1D 参数
+  cnn1d:
+    channels: [32, 64, 128]
+    kernel_sizes: [7, 5, 3]
+    pool_sizes: [2, 2, 2]
+  # CNN2D 参数 (用于时频图)
+  cnn2d:
+    channels: [16, 32, 64, 128]
+    kernel_size: 3
+
+# ---------- 训练配置 ----------
+training:
+  epochs: 50
+  batch_size: 64
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  lr_scheduler: "cosine"     # 可选: step, cosine, none
+  patience: 10               # 早停耐心值
+
+  # SVDD 损失配置
+  svdd:
+    nu: 0.1                  # 异常比例上界 (0,1)，越小球越紧
+    warm_up_epochs: 5        # 热身阶段（二分类预训练，给球心一个好的初始位置）
+    lambda_neg: 1.0          # 负类排斥权重（与正类聚拢项同量级）
+    margin: 4.0              # 负类距离平方的目标下界（约为正类均值的4倍）
+
+  # 辅助对比损失 (可选，帮助正负类分离)
+  use_aux_contrastive: true
+  contrastive_margin: 2.0
+  lambda_contrastive: 0.3    # 对比损失权重
+
+# ---------- 评估配置 ----------
+evaluation:
+  # 阈值选择策略
+  threshold_strategy: "val_fpr"   # 可选: val_fpr, percentile
+  target_fpr: 0.05               # 在验证集上目标假阳性率 5%
+  percentile: 95                 # 备用: 正类距离的第95百分位
+
+  metrics:
+    - "auroc"
+    - "fpr_at_95tpr"
+    - "accuracy"
+    - "confusion_matrix"
+
+# ---------- 输出配置 ----------
+output:
+  model_dir: "models"
+  results_dir: "results"
+  save_best_only: true
+  log_interval: 10           # 每N个batch打印一次日志
