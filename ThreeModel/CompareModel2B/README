@@ -1,1 +1,1 @@
-
+原版的stat_features.py在转换成onnx文件中，可能发生，pytorch低版本不适用，numpy版本不匹配，以及在推理的时候，采用onnx计算出现置信度为NaN以预测性能误差的问题，正版已经在To_onnx_Correct中修改
