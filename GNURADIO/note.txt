@@ -1,0 +1,7 @@
+(base) C:\Users\CPC-ML>python -c "import gnuradio; print(gnuradio.__file__)"
+E:\radioconda\Lib\site-packages\gnuradio\__init__.py
+
+(base) C:\Users\CPC-ML>where python
+E:\radioconda\python.exe
+D:\anaconda3\python.exe
+C:\Users\CPC-ML\AppData\Local\Microsoft\WindowsApps\python.exe
