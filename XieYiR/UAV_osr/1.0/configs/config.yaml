@@ -1,0 +1,111 @@
+# ---------- 数据配置 ----------
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+
+  # 三个数据文件，均为字典格式 {"data": (N,1024), "labels": (N,)}
+  train_known_filename: "train_known.npy"      # 目标类 + 已知负类，内部切分 train/val
+  test_known_filename: "test_known.npy"        # 与 train_known 相同类别体系，测试用
+  test_unknown_filename: "test_unknown.npy"    # 全新未知类别，开放集拒识测试用
+
+  # 目标类别（需要建球的已知类）
+  # 顺序决定训练标签 0..K-1，必须与 model.num_classes 一致
+  target_classes:
+    - "BEEBEERUN"
+    - "DJI_M600"
+    - "DJI_INSPIRE"
+    - "DJI_PHANTOM"
+
+  # 已知负类（train_known.npy / test_known.npy 中出现，训练时可见，标签统一为 -1）
+  known_negative_classes:
+    - "APPLE_IPAD3"
+    - "FITBIT_CHARGE3"
+    - "CISCO_LINKSYS_E3200"
+
+  # 未知类别（仅出现在 test_unknown.npy 中，训练不可见，标签统一为 -1）
+  unknown_classes:
+    - "DJI_MAVICPRO"
+    - "APPLE_IPHONE6S"
+    - "APPLE_IPHONE7"
+    - "MOTOROLA"
+    - "TPLINK_TL_WR940N"
+
+  # train_known.npy 内部切分比例（按类别随机切分 train/val）
+  train_ratio: 0.8
+  random_seed: 42
+
+# ---------- 特征提取配置 ----------
+feature:
+  # 原始数据为长度1024的时域电压序列（非IQ复数信号），无需做频谱变换
+  signal_length: 1024
+  normalize_signal: "zscore"   # 可选: zscore, minmax, none
+
+# ---------- 模型配置 ----------
+model:
+  num_classes: 4              # 已知目标类别数（球心数量），需与 target_classes 长度一致
+  normalize_feature: true     # 是否在 forward 中做 L2 归一化（约束到单位超球面）
+
+  backbone: "cnn1d"           # 原始电压序列，使用 1D-CNN
+  feature_dim: 128            # 特征嵌入维度
+
+  # CNN1D 参数
+  cnn1d:
+    channels: [32, 64, 128]
+    kernel_sizes: [7, 5, 3]
+    pool_sizes: [2, 2, 2]
+
+  # CNN2D 参数（当前数据未使用，保留以便切换到时频图输入）
+  cnn2d:
+    channels: [16, 32, 64, 128]
+    kernel_size: 3
+
+# ---------- 训练配置 ----------
+training:
+  epochs: 50
+  batch_size: 64
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  lr_scheduler: "cosine"       # 可选: step, cosine, none
+  patience: 10                 # 早停耐心值
+  num_workers: 0
+
+  # 多球体 SVDD 损失配置
+  svdd:
+    warm_up_epochs: 5          # 热身阶段（多分类预训练，给各球心一个好的初始位置）
+    lambda_neg: 1.0            # 他类球心排斥权重（与自身聚拢项同量级）
+    margin: 4.0                # 他类球心距离平方的目标下界
+
+    lambda_center_sep: 0.0     # 球心分离损失权重（centers为buffer无梯度，此项仅用于监控）
+    margin_center: 4.0         # 球心间距离平方的目标下界
+
+    update_centers_every: 5    # 每N个epoch用EMA更新一次各球心，0表示不更新
+    center_momentum: 0.9       # EMA动量系数
+
+    threshold_percentile: 0.95 # 阈值标定分位数（训练过程中周期性标定，用于早停监控）
+
+  # 辅助对比损失 (可选，帮助各类别特征分离)
+  use_aux_contrastive: true
+  contrastive_margin: 2.0
+  lambda_contrastive: 0.3      # 对比损失权重
+
+# ---------- 评估配置 ----------
+evaluation:
+  # 阈值选择策略（按已知类别分别标定）
+  threshold_strategy: "val_fpr"   # 可选: val_fpr, percentile
+  target_fpr: 0.05                # 目标假阳性率 5%（预留，当前按percentile实现）
+  percentile: 95                  # 各已知类样本"到自身球心"距离的第95百分位作为该类阈值
+
+  metrics:
+    - "closed_acc"          # 闭集多分类准确率
+    - "auroc"                # 开集检测 AUROC（已知 vs 未知）
+    - "fpr_at_95tpr"
+    - "per_class_recall"     # 逐类识别率
+    - "unknown_rejection_rate"
+    - "confusion_matrix"
+
+# ---------- 输出配置 ----------
+output:
+  model_dir: "models"
+  results_dir: "results"
+  save_best_only: true
+  log_interval: 10             # 每N个batch打印一次日志

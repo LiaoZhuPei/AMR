@@ -1,0 +1,64 @@
+PS E:\XieYiR\UAV_osr> & D:\anaconda3\envs\py_transformers2\python.exe e:/XieYiR/UAV_osr/dataset_generator.py
+
+=========== 正在生成 train_known.npy ===========
+[train_known] 读取: E:/CardRF/SVDD_DATA_CSV\Train_known_target\BEEBEERUN
+    -> shape=(28000, 1024), label=BEEBEERUN
+[train_known] 读取: E:/CardRF/SVDD_DATA_CSV\Train_known_target\DJI_M600
+    -> shape=(28000, 1024), label=DJI_M600
+[train_known] 读取: E:/CardRF/SVDD_DATA_CSV\Train_known_target\DJI_INSPIRE
+    -> shape=(14000, 1024), label=DJI_INSPIRE
+[train_known] 读取: E:/CardRF/SVDD_DATA_CSV\Train_known_target\DJI_PHANTOM
+    -> shape=(14000, 1024), label=DJI_PHANTOM
+[train_known] 读取: E:/CardRF/SVDD_DATA_CSV\Train_known_untarget\APPLE_IPAD3
+    -> shape=(28000, 1024), label=APPLE_IPAD3
+[train_known] 读取: E:/CardRF/SVDD_DATA_CSV\Train_known_untarget\FITBIT_CHARGE3
+    -> shape=(28000, 1024), label=FITBIT_CHARGE3
+[train_known] 读取: E:/CardRF/SVDD_DATA_CSV\Train_known_untarget\CISCO_LINKSYS_E3200
+    -> shape=(28000, 1024), label=CISCO_LINKSYS_E3200
+
+[train_known] 保存完成 -> ./npy_dataset\train_known.npy
+    data.shape  = (168000, 1024)
+    label.shape = (168000,)
+    类别分布    = {'APPLE_IPAD3': 28000, 'BEEBEERUN': 28000, 'CISCO_LINKSYS_E3200': 28000, 'DJI_INSPIRE': 14000, 'DJI_M600': 28000, 'DJI_PHANTOM': 14000, 'FITBIT_CHARGE3': 28000}
+
+
+=========== 正在生成 test_known.npy ===========
+[test_known] 读取: E:/CardRF/SVDD_DATA_CSV\Test_known_target\BEEBEERUN
+    -> shape=(7000, 1024), label=BEEBEERUN
+[test_known] 读取: E:/CardRF/SVDD_DATA_CSV\Test_known_target\DJI_M600
+    -> shape=(7000, 1024), label=DJI_M600
+[test_known] 读取: E:/CardRF/SVDD_DATA_CSV\Test_known_target\DJI_INSPIRE
+    -> shape=(3500, 1024), label=DJI_INSPIRE
+[test_known] 读取: E:/CardRF/SVDD_DATA_CSV\Test_known_target\DJI_PHANTOM
+    -> shape=(3500, 1024), label=DJI_PHANTOM
+[test_known] 读取: E:/CardRF/SVDD_DATA_CSV\Test_known_untarget\APPLE_IPAD3
+    -> shape=(7000, 1024), label=APPLE_IPAD3
+[test_known] 读取: E:/CardRF/SVDD_DATA_CSV\Test_known_untarget\FITBIT_CHARGE3
+    -> shape=(7000, 1024), label=FITBIT_CHARGE3
+[test_known] 读取: E:/CardRF/SVDD_DATA_CSV\Test_known_untarget\CISCO_LINKSYS_E3200
+    -> shape=(7000, 1024), label=CISCO_LINKSYS_E3200
+
+[test_known] 保存完成 -> ./npy_dataset\test_known.npy
+    data.shape  = (42000, 1024)
+    label.shape = (42000,)
+    类别分布    = {'APPLE_IPAD3': 7000, 'BEEBEERUN': 7000, 'CISCO_LINKSYS_E3200': 7000, 'DJI_INSPIRE': 3500, 'DJI_M600': 7000, 'DJI_PHANTOM': 3500, 'FITBIT_CHARGE3': 7000}
+
+
+=========== 正在生成 test_unknown.npy ===========
+[test_unknown] 读取: E:/CardRF/SVDD_DATA_CSV\Test_unknown_untarget\DJI_MAVICPRO
+    -> shape=(5000, 1024), label=DJI_MAVICPRO
+[test_unknown] 读取: E:/CardRF/SVDD_DATA_CSV\Test_unknown_untarget\APPLE_IPHONE6S
+    -> shape=(5000, 1024), label=APPLE_IPHONE6S
+[test_unknown] 读取: E:/CardRF/SVDD_DATA_CSV\Test_unknown_untarget\APPLE_IPHONE7
+    -> shape=(5000, 1024), label=APPLE_IPHONE7
+[test_unknown] 读取: E:/CardRF/SVDD_DATA_CSV\Test_unknown_untarget\MOTOROLA
+    -> shape=(5000, 1024), label=MOTOROLA
+[test_unknown] 读取: E:/CardRF/SVDD_DATA_CSV\Test_unknown_untarget\TPLINK_TL_WR940N
+    -> shape=(5000, 1024), label=TPLINK_TL_WR940N
+
+[test_unknown] 保存完成 -> ./npy_dataset\test_unknown.npy
+    data.shape  = (25000, 1024)
+    label.shape = (25000,)
+    类别分布    = {'APPLE_IPHONE6S': 5000, 'APPLE_IPHONE7': 5000, 'DJI_MAVICPRO': 5000, 'MOTOROLA': 5000, 'TPLINK_TL_WR940N': 5000}
+
+全部数据集生成完毕！
