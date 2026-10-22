@@ -1,254 +1,203 @@
-下面分两部分给你:
+这次的警告其实是**无害的、预期中的**（后面详细解释），所以依然出现并不意味着修复失败。但既然 NaN 仍然复现，我们需要往更深一层去找——我现在有一个新的、更具体的怀疑对象，而且这次能解释"为什么只有这份真实数据在 ONNX 下出问题，PyTorch 却完全正常"。
 
 ---
 
-# 一、相比原始单模型程序，多级识别版本的主要改动点
+## 一、先澄清：这两条 TracerWarning 不是问题根源，可以忽略
 
-| 序号 | 改动点 | 说明 |
-|---|---|---|
-| 1 | **移除 `labels.txt` 外部文件依赖** | 原来用 `readClassNames()` 从文件读标签，改为三组 `std::vector<std::string>` 直接硬编码在代码里（`labels_stage1`/`labels_gmsk`/`labels_qam`），对应三个不同的 ONNX 模型。 |
-| 2 | **预处理与推理解耦** | 原来 `run_iq_inference()` 把"功率归一化 + 交错排列 + 跑模型 + 打印"全部耦合在一个函数里，只能对应一个模型。拆分成 `preprocess_iq()`（只做一次数据预处理）+ `run_model_inference()`（通用推理，可反复喂给不同 session），避免二级推理时重复做归一化计算，逻辑也更清晰。 |
-| 3 | **推理结果结构化** | 新增 `InferenceResult` 结构体（`index`/`label`/`confidence`/`probs`），替代原来直接在函数里打印、返回裸 `int index` 的方式，方便在多级之间传递和比较结果。 |
-| 4 | **三模型并行加载** | 原来只加载 1 个 `Ort::Session`，现在同时加载并常驻 3 个 session（一级17类、二级GMSK组3类、二级QAM组5类），分别维护各自的 input/output 节点名。 |
-| 5 | **路由判断逻辑** | 新增 `needGmskSecondStage()` / `needQamSecondStage()` 两个判断函数：一级结果若为 `2ASK/BPSK/GMSK` → 进 GMSK 二级模型；若标签中含 `"QAM"` → 进 QAM 二级模型；否则一级结果直接作为最终结果，不做二级推理。 |
-| 6 | **NaN/Inf 防御** | 针对排查中发现的 ONNX `atan2` 在 `(0,0)` 点退化为 `0/0` 导致 NaN 的问题（已在模型侧用 `safe_atan2` 修复根因），曾在 C++ 侧加过 `hasInvalidValue()` 检测 + 兜底回退逻辑（二级结果异常时保留一级结果），避免 NaN 被 `std::max_element` 静默误判成 index 0 对应的类别。 |
-| 7 | **统计方式调整** | 原来用 `vector<int> prediction_counts(labels.size())` 按一级标签的 index 统计，现在改为 `std::map<std::string, int> final_prediction_counts` 按**最终标签字符串**统计，因为最终结果可能来自三个不同模型、不同的 index 空间，用字符串 key 更安全、不会错位。 |
-| 8 | **打印内容增加层级信息** | 每个样本会依次打印"一级推理结果"→（若触发）"二级推理结果"→"最终结果（含是否经过二级推理的标注）"，而不是原来只打印一次最终预测。 |
-| 9 | **测试数据目录变更** | `csv_folder_path` 从原来的单模型测试目录改为 `./data_GMSK1`（按你最新需求调整）。 |
-
----
-
-# 二、精简通用版本（去除冗余检查，提升可扩展性）
-
-设计思路：把"多级级联"抽象成一个**通用的 Stage（阶段）+ Rule（路由规则）**框架，而不是写死"GMSK组/QAM组"这种专用分支判断。以后如果要加第三级、第四级，或者改路由条件，只需要改配置数据，不需要改控制流代码。
-
-```cpp
-#include <iostream>
-#include <vector>
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <cmath>
-#include <algorithm>
-#include <functional>
-#include <filesystem>
-#include <chrono>
-#include <map>
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-#include "onnxruntime_cxx_api.h"
-#include "cpu_provider_factory.h"
-
-// ===================== 基础工具 =====================
-
-std::wstring ToWideString(const std::string& str) {
-    if (str.empty()) return L"";
-    int n = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), nullptr, 0);
-    std::wstring w(n, 0);
-    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &w[0], n);
-    return w;
-}
-
-std::vector<float> softmax(const std::vector<float>& x) {
-    std::vector<float> y(x.size());
-    float mx = *std::max_element(x.begin(), x.end());
-    float sum = 0.f;
-    for (size_t i = 0; i < x.size(); ++i) { y[i] = std::exp(x[i] - mx); sum += y[i]; }
-    for (auto& v : y) v /= sum;
-    return y;
-}
-
-bool loadCsvIQ(const std::string& path, std::vector<float>& I, std::vector<float>& Q, int expected_len = 1024) {
-    std::ifstream file(path);
-    if (!file.is_open()) return false;
-    std::string li, lq;
-    if (!std::getline(file, li) || !std::getline(file, lq)) return false;
-
-    auto parseRow = [](const std::string& line, std::vector<float>& out) {
-        std::stringstream ss(line);
-        std::string v;
-        while (std::getline(ss, v, ',')) if (!v.empty()) out.push_back(std::stof(v));
-    };
-    I.clear(); Q.clear();
-    parseRow(li, I);
-    parseRow(lq, Q);
-    return (int)I.size() == expected_len && (int)Q.size() == expected_len;
-}
-
-std::vector<float> preprocess(const std::vector<float>& I, const std::vector<float>& Q) {
-    int L = (int)I.size();
-    float power = 0.f;
-    for (int i = 0; i < L; ++i) power += I[i] * I[i] + Q[i] * Q[i];
-    power /= L;
-    float scale = (power < 1e-10f) ? 1.0f : 1.0f / std::sqrt(power);
-
-    std::vector<float> out(L * 2);
-    for (int i = 0; i < L; ++i) {
-        out[i * 2]     = I[i] * scale;
-        out[i * 2 + 1] = Q[i] * scale;
-    }
-    return out;
-}
-
-// ===================== 通用模型阶段 =====================
-
-struct ModelStage {
-    std::string name;
-    Ort::Session session{ nullptr };
-    std::string input_name;
-    std::string output_name;
-    std::vector<std::string> labels;
-
-    ModelStage(Ort::Env& env, const std::string& model_path,
-               const std::string& stage_name, std::vector<std::string> cls)
-        : name(stage_name), labels(std::move(cls))
-    {
-        Ort::SessionOptions opts;
-        opts.SetGraphOptimizationLevel(ORT_ENABLE_BASIC);
-        OrtSessionOptionsAppendExecutionProvider_CPU(opts, 0);
-        session = Ort::Session(env, ToWideString(model_path).c_str(), opts);
-
-        Ort::AllocatorWithDefaultOptions alloc;
-        input_name = session.GetInputName(0, alloc);
-        output_name = session.GetOutputName(0, alloc);
-    }
-
-    // 对一份预处理好的 (1,1024,2) 数据做推理，返回 <label, confidence, probs>
-    std::tuple<std::string, float, std::vector<float>> infer(std::vector<float>& data, int seq_len = 1024) {
-        std::array<int64_t, 3> shape{ 1, seq_len, 2 };
-        auto mem = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
-        Ort::Value input = Ort::Value::CreateTensor<float>(mem, data.data(), data.size(), shape.data(), shape.size());
-
-        const char* in_names[] = { input_name.c_str() };
-        const char* out_names[] = { output_name.c_str() };
-        auto outputs = session.Run(Ort::RunOptions{nullptr}, in_names, &input, 1, out_names, 1);
-
-        const float* raw = outputs[0].GetTensorMutableData<float>();
-        int n = (int)outputs[0].GetTensorTypeAndShapeInfo().GetShape()[1];
-        auto probs = softmax(std::vector<float>(raw, raw + n));
-        int idx = (int)std::distance(probs.begin(), std::max_element(probs.begin(), probs.end()));
-        return { labels[idx], probs[idx] * 100.f, probs };
-    }
-};
-
-// ===================== 通用路由规则 =====================
-
-struct RouteRule {
-    std::function<bool(const std::string&)> condition;  // 上一级标签满足什么条件
-    int next_stage;                                       // 触发哪个后续stage（下标）
-};
-
-// ===================== 级联推理引擎 =====================
-
-class CascadeClassifier {
-public:
-    CascadeClassifier(Ort::Env& env) : env_(env) {}
-
-    int addStage(const std::string& model_path, const std::string& name, std::vector<std::string> labels) {
-        stages_.emplace_back(env_, model_path, name, std::move(labels));
-        return (int)stages_.size() - 1;
-    }
-
-    void addRule(int from_stage, std::function<bool(const std::string&)> cond, int to_stage) {
-        rules_[from_stage].push_back({ cond, to_stage });
-    }
-
-    // 从 stage 0 开始级联推理，返回每一级的 (stage名, label, confidence)
-    std::vector<std::tuple<std::string, std::string, float>> run(std::vector<float> data) {
-        std::vector<std::tuple<std::string, std::string, float>> trace;
-        int cur = 0;
-        while (cur != -1) {
-            auto [label, conf, probs] = stages_[cur].infer(data);
-            trace.emplace_back(stages_[cur].name, label, conf);
-
-            int next = -1;
-            if (rules_.count(cur)) {
-                for (auto& r : rules_[cur]) {
-                    if (r.condition(label)) { next = r.next_stage; break; }
-                }
-            }
-            cur = next;
-        }
-        return trace;
-    }
-
-private:
-    Ort::Env& env_;
-    std::vector<ModelStage> stages_;
-    std::map<int, std::vector<RouteRule>> rules_;
-};
-
-// ===================== 主程序 =====================
-
-int main() {
-    Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "IQ-Inference");
-    CascadeClassifier classifier(env);
-
-    // --- 注册三级模型（以后加模型/改类别只改这里） ---
-    int stage1 = classifier.addStage("./AMR_tcn_sionnAll_1.onnx", "Stage1", {
-        "2ASK", "BPSK", "QPSK", "8PSK", "OQPSK", "Pi4DQPSK",
-        "16QAM", "32QAM", "64QAM", "128QAM", "256QAM",
-        "16APSK", "32APSK", "2FSK", "4FSK", "MSK", "GMSK"
-    });
-    int stageGmsk = classifier.addStage("./AMR_tcn_sionnAll_gmsk.onnx", "GMSK-Stage2",
-        { "2ASK", "BPSK", "GMSK" });
-    int stageQam = classifier.addStage("./AMR_tcn_v2_SionnaAll_qam.onnx", "QAM-Stage2",
-        { "16QAM", "32QAM", "64QAM", "128QAM", "256QAM" });
-
-    // --- 注册路由规则：stage1结果满足什么条件 -> 进入哪个stage ---
-    classifier.addRule(stage1, [](const std::string& l) {
-        return l == "2ASK" || l == "BPSK" || l == "GMSK";
-    }, stageGmsk);
-
-    classifier.addRule(stage1, [](const std::string& l) {
-        return l.find("QAM") != std::string::npos;
-    }, stageQam);
-
-    // --- 扫描测试文件 ---
-    std::string folder = "./data_GMSK1";
-    std::vector<std::string> files;
-    for (auto& e : std::filesystem::directory_iterator(folder))
-        if (e.path().extension() == ".csv") files.push_back(e.path().string());
-    std::sort(files.begin(), files.end());
-
-    std::map<std::string, int> final_counts;
-    int total = 0;
-
-    for (auto& path : files) {
-        std::vector<float> I, Q;
-        if (!loadCsvIQ(path, I, Q)) continue;
-
-        auto data = preprocess(I, Q);
-        auto trace = classifier.run(data);
-
-        std::cout << "[" << std::filesystem::path(path).filename().string() << "] ";
-        for (auto& [stage_name, label, conf] : trace)
-            std::cout << stage_name << ":" << label << "(" << conf << "%) -> ";
-        std::cout << "FINAL: " << std::get<1>(trace.back()) << std::endl;
-
-        final_counts[std::get<1>(trace.back())]++;
-        total++;
-    }
-
-    std::cout << "\n===== Summary (" << total << " samples) =====" << std::endl;
-    for (auto& [label, cnt] : final_counts)
-        std::cout << "  " << label << ": " << cnt << " (" << (cnt * 100.0 / total) << "%)" << std::endl;
-
-    return 0;
-}
+```
+qi = [int(q * (L - 1)) for q in (...)]
+step = max(1, L // 256)
 ```
 
-## 这个精简版的通用性体现在哪里
+这两条警告的含义是："序列长度 L 被当作常量（1024）固化进了计算图"。只要你**所有推理输入都严格是 1024 长度**（你的 C++ 代码和推理脚本都做了这个校验），这个警告就只是提示信息，不影响数值正确性。它和 NaN 问题**不是同一件事**，不需要为了消除这个警告再改代码。
 
-1. **新增/替换模型不需要改控制流**：只需要调用 `classifier.addStage(path, name, labels)` 注册一个新模型，`addRule(...)` 配置触发条件，不需要写新的 `if-else` 分支或专用函数。
-2. **支持任意级联深度**：`run()` 里是一个 `while` 循环，不是写死的"一级→二级"，如果以后二级结果还要触发三级模型，只需要再 `addRule(stageQam, ..., stage3)` 即可，代码结构不用动。
-3. **路由条件用 `std::function` 表达**，可以是精确匹配、子串匹配、甚至结合置信度阈值（比如 `[](const string& l){ return l=="BPSK"; }` 可以换成更复杂的 lambda）。
-4. **去掉了之前专门为排查 NaN 加的调试打印、原始 logits 打印、I/Q 前5点打印等**，因为根因已经在模型侧修复，不再需要这些防御性代码，保持主流程干净。
-5. **`ModelStage::infer()` 是完全通用的推理函数**，不关心是几分类、不关心标签内容，可以被任意阶段复用。
+---
 
-### 需要你注意的点
+## 二、新的、更精准的怀疑对象：`atan2` 在 `(0, 0)` 点的行为差异
 
-- 这个精简版**去掉了 NaN 防御**（按你的要求"没有冗余检查"），前提是你已经在模型侧用 `safe_atan2` 修复了根因。如果以后遇到新的数值异常场景，可以在 `ModelStage::infer()` 的 `probs` 计算后视情况再加检测，不影响整体架构。
-- `files.begin()`/文件数量限制（原来的 `max_files_to_process`）在这个精简版里省略了，如果需要限制数量，可以在扫描文件后加一行 `if (files.size() > N) files.resize(N);`。
-- 异常处理（`try/catch`）也做了精简，如果 `session.Run()` 抛异常会直接中断程序，生产环境建议按需要补充 `try/catch`。
+### 关键线索重新梳理
+
+你说的是：**用 128QAM 的真实数据**，PyTorch 端完全正常，ONNX 端出 NaN。这是一个非常重要的区别——**不是用随机数据复现的，而是用了具体的、真实的信号样本**。这意味着问题很可能和这份数据里的**某个特殊数值**有关，而不是普遍性的计算逻辑错误（因为如果是通用逻辑错误，应该对所有数据都会复现，包括随机数据）。
+
+### 核心怀疑：`torch.atan2(Q, I)` 在 `I=0, Q=0` 时的处理
+
+你的代码里有两处用到 `atan2`：
+
+```python
+phase = torch.atan2(Q, I)
+...
+dp = torch.atan2(torch.sin(dp), torch.cos(dp))
+```
+
+**PyTorch 原生的 `atan2(y, x)` 对 `(0, 0)` 这个特殊点有明确定义**（按照 IEEE 754 标准，`atan2(0, 0) = 0`），这是一个被内部特殊处理（hard-coded）的边界情况，不是通过 `y/x` 做除法算出来的。
+
+但是，当高版本 PyTorch 把 `atan2` 导出为 ONNX 时，它是**用别的基础算子组合分解实现**的，这个分解公式的核心通常是：
+
+```
+atan2(y, x) ≈ atan(y / x)   # 再根据 x, y 的符号做象限修正
+```
+
+**如果 `x` 和 `y`同时为 0**，那么 `y / x = 0 / 0`，这在浮点运算中结果是 **NaN**（而不是 0！）。也就是说：
+
+- **PyTorch 原生 `atan2(0, 0)` → 返回 `0`**（正确、符合预期）
+- **ONNX 分解后的 `atan2(0, 0)` → 可能返回 `NaN`**（因为内部做了 `0/0` 的除法）
+
+### 为什么只有这份 128QAM 数据会触发，而不是所有数据
+
+这完全取决于**这份具体信号里，是否存在某个采样点恰好 `I=0` 且 `Q=0`**（或者在 `power_normalize` 之后，某个点因为极低幅度/量化误差导致恰好是 `(0,0)`）。这种情况在真实采集的信号中是完全可能出现的——比如：
+
+- 信号包络过零点附近的采样
+- ADC 量化导致的精确 0 值
+- 滤波器群时延/边沿效应导致个别采样点幅度为 0
+
+**只要 1024 个点里有一个点满足 `(I,Q)=(0,0)`，这个 NaN 就会从 `phase` 这个中间变量产生，然后通过后续的 `dp`、`f_phase_std`、`f_phase_mean` 一路传播，最终污染整个 42 维特征向量，再经过 `torch.cat` 污染整个输出，表现为你看到的"全部输出都是 NaN"。**
+
+这个解释完美对应你观察到的现象：**同一个模型结构、同一套代码逻辑，PyTorch 正常而 ONNX 异常，且具体某份数据触发、不是普遍性现象**。
+
+---
+
+## 三、修复方案：手写一个在 `(0,0)` 处明确返回 0 的安全版 `atan2`
+
+不要依赖 ONNX 导出器自动分解 `atan2`（它的边界处理行为你无法控制，且在不同 PyTorch/opset 版本间可能不一致）。改为自己实现一个**显式处理 `(0,0)` 特殊情况**的版本，确保 PyTorch 和 ONNX 导出后行为完全一致。
+
+在 `stat_features.py` 文件顶部添加：
+
+```python
+def safe_atan2(y, x, eps=1e-12):
+    """
+    数值稳定、ONNX导出安全的 atan2 实现。
+    显式处理 (0,0) 情况，避免 0/0 产生 NaN。
+    """
+    # 用一个极小的偏移量防止除以精确的0
+    x_safe = torch.where(
+        (x.abs() < eps) & (y.abs() < eps),
+        torch.full_like(x, eps),   # (0,0)点：给x一个极小正数，使atan(y/x)=atan(0/eps)=0
+        x
+    )
+    atan_val = torch.atan(y / (x_safe + torch.sign(x_safe) * eps + eps))
+
+    result = torch.where(
+        x > 0, atan_val,
+        torch.where(
+            (x < 0) & (y >= 0), atan_val + torch.pi,
+            torch.where(
+                (x < 0) & (y < 0), atan_val - torch.pi,
+                torch.where(
+                    (x == 0) & (y > 0), torch.full_like(x, torch.pi / 2),
+                    torch.where(
+                        (x == 0) & (y < 0), torch.full_like(x, -torch.pi / 2),
+                        torch.zeros_like(x)   # x==0 and y==0 → 显式返回0
+                    )
+                )
+            )
+        )
+    )
+    return result
+```
+
+然后把文件里两处 `torch.atan2` 的调用替换掉：
+
+```python
+# 原来:
+# phase = torch.atan2(Q, I)
+phase = safe_atan2(Q, I)
+
+# 原来:
+# dp = torch.atan2(torch.sin(dp), torch.cos(dp))
+dp = safe_atan2(torch.sin(dp), torch.cos(dp))
+```
+
+**关于这个实现的说明**：
+- 用 `torch.where` 枚举所有分支（`x>0`、`x<0且y≥0`、`x<0且y<0`、`x=0且y>0`、`x=0且y<0`、`x=0且y=0`），每个分支都是显式的数学表达式，不依赖 ONNX 导出器自己去猜测怎么分解。
+- 关键的 `(x==0, y==0)` 分支被**显式写成 `torch.zeros_like(x)`**，不涉及任何除法，从根本上杜绝了 `0/0` 产生 NaN 的可能。
+- 第二个 `atan2(sin(dp), cos(dp))` 的调用中，`sin(dp)` 和 `cos(dp)` 理论上不会同时为 0（因为 `sin²+cos²=1`），所以这处风险本身较小，但统一用 `safe_atan2` 替换，保证两处行为一致、代码更健壮。
+
+---
+
+## 四、如何验证这个假设是否正确（强烈建议先做这步，再决定要不要应用修复）
+
+在应用修复之前，建议你先**实锤定位**，而不是直接改完就重新导出（这样万一没解决，你不知道是假设错了还是修复没生效）。
+
+### 验证脚本：直接检查这份真实数据里是否存在 `(I,Q)=(0,0)` 的点
+
+```python
+import h5py
+import numpy as np
+
+# 换成你实际触发NaN的那个128QAM文件
+file_path = 'xxx.mat'
+
+with h5py.File(file_path, 'r') as f:
+    signal = f['data_save'][:]  # (1, 2, 1024)
+
+I = signal[0, 0, :]
+Q = signal[0, 1, :]
+
+# 做和推理脚本一致的功率归一化
+power = np.mean(I**2 + Q**2)
+I_n = I / np.sqrt(power)
+Q_n = Q / np.sqrt(power)
+
+# 检查是否存在精确的 (0,0) 点，或者极度接近0的点
+zero_mask = (np.abs(I_n) < 1e-7) & (np.abs(Q_n) < 1e-7)
+print("是否存在(I,Q)≈(0,0)的点:", zero_mask.any())
+print("具体位置:", np.where(zero_mask))
+print("该点附近的I,Q值:", I_n[zero_mask], Q_n[zero_mask])
+```
+
+如果这里打印出 `True` 并且有具体的点，那基本就实锤了——**这份数据里确实存在导致 `atan2` 退化为 `0/0` 的点**。
+
+### 进一步验证：用这个具体点手动构造最小复现用例
+
+```python
+import torch
+
+# 构造一个最小测试：把这个有问题的点单独喂给atan2
+y = torch.tensor([Q_n[zero_mask][0]])
+x = torch.tensor([I_n[zero_mask][0]])
+
+print("PyTorch原生 atan2:", torch.atan2(y, x))
+
+# 导出一个只有atan2的微型模型，看ONNX怎么算这个点
+class Atan2Test(torch.nn.Module):
+    def forward(self, y, x):
+        return torch.atan2(y, x)
+
+m = Atan2Test()
+torch.onnx.export(m, (y, x), "atan2_test.onnx",
+                   input_names=['y', 'x'], output_names=['out'],
+                   opset_version=13)
+
+import onnxruntime as ort
+sess = ort.InferenceSession("atan2_test.onnx")
+onnx_result = sess.run(None, {'y': y.numpy(), 'x': x.numpy()})
+print("ONNX atan2:", onnx_result)
+```
+
+如果 PyTorch 输出是一个正常数值（比如 `0.0` 或其他具体角度），而 ONNX 输出是 `nan`，**这就是 100% 实锤的根因**，可以放心应用上面第三部分的修复方案。
+
+---
+
+## 五、如果验证后发现并不是这个问题
+
+如果上面的检查显示这份数据里**并不存在** `(0,0)` 附近的点，那么需要用之前提到的"中间特征对拍"方法（把 `HigherOrderStats._extract` 单独导出，对比 PyTorch 和 ONNX 的 42 维原始特征，逐列定位 NaN 出现在哪一维），这样能更精确地缩小范围。考虑到你已经修复了直方图和切片两处，如果 `atan2` 也排除了，剩下的嫌疑点按风险排序是：
+
+1. `f_sigma_a = a4 / (a2.pow(2) + 1e-10)` 和 `f_sigma_6 = a6 / (a2.pow(3) + 1e-10)`：如果信号幅度 `a2` 在 ONNX 下的浮点计算路径和 PyTorch 略有差异（比如算子融合顺序不同导致的浮点误差累积），极端情况下可能放大误差，但这个可能性较低。
+2. `torch.cuda.amp.autocast(enabled=False)` 这个上下文管理器在 ONNX 导出时的行为——**这个其实也值得怀疑**，因为 `autocast` 相关的上下文管理器在 trace 模式下有时不会被正确处理，建议导出时确认这里是否引入了意外的精度转换。可以临时去掉这个 context 测试一下（不影响数值结果，只是精度策略）：
+
+```python
+def forward(self, x):
+    with torch.no_grad():  # 临时去掉 autocast，只保留 no_grad
+        feats = self._extract(x.float())
+    return self.proj(feats)
+```
+
+---
+
+## 建议的执行顺序
+
+1. **先跑第四部分的验证脚本**，确认这份 128QAM 数据里是否真的存在 `(I,Q)≈(0,0)` 的点，以及用最小复现用例验证 `atan2` 在 ONNX 下对这个点是否真的输出 NaN。
+2. 如果验证通过 → 应用第三部分的 `safe_atan2` 修复，替换文件里两处调用，重新导出，用"PyTorch vs ONNX 同一输入对比"的方法确认 NaN 消失。
+3. 如果验证不通过 → 按第五部分，做完整的 42 维中间特征对拍，把结果发给我，我们继续往下缩小范围。
+
+把第四部分验证脚本的输出结果发给我，这样能最快确认问题根源。
