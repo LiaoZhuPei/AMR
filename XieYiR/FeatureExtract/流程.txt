@@ -1,0 +1,14 @@
+project/
+├── data/
+│   ├── load_data.py          # 数据加载
+│   └── preprocess.py         # 预处理
+├── features/
+│   └── extractor.py          # 特征提取
+├── models/
+│   ├── one_class_svm.py      # One-Class SVM
+│   ├── isolation_forest.py   # 孤立森林
+│   └── ensemble.py           # 集成方法
+├── evaluation/
+│   └── metrics.py            # 评估指标
+├── config.py                 # 配置文件
+└── main.py                   # 主程序
