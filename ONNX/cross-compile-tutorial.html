@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>交叉编译实验教程 — AArch64 ONNX</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+SC:wght@400;500;600&display=swap');
+
+:root {
+  --bg:        #0d0d0d;
+  --surface:   #141414;
+  --surface2:  #1c1c1c;
+  --border:    #2a2a2a;
+  --border2:   #333;
+  --accent:    #e8ff00;   /* electric yellow */
+  --accent2:   #ff3c3c;  /* red alert */
+  --accent3:   #00ff99;  /* green confirm */
+  --accent4:   #4da6ff;  /* blue info */
+  --text:      #c8c8c8;
+  --text-dim:  #555;
+  --text-hi:   #f0f0f0;
+  --code-bg:   #080808;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: 'IBM Plex Sans SC', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* noise overlay */
+body::after {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;
+  z-index:0;
+  opacity:.5;
+}
+
+/* ── HEADER ── */
+header {
+  position:relative; z-index:10;
+  padding: 52px 48px 36px;
+  border-bottom: 1px solid var(--border2);
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: end;
+}
+
+.header-left {}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+h1 {
+  font-family: var(--font-mono);
+  font-size: clamp(22px, 3vw, 40px);
+  font-weight: 700;
+  color: var(--text-hi);
+  line-height: 1.15;
+}
+
+h1 .y { color: var(--accent); }
+h1 .r { color: var(--accent2); }
+
+.tagline {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  max-width: 560px;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.stat-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 14px;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.stat-pill span { color: var(--accent3); }
+
+/* ── LAYOUT ── */
+.layout {
+  position:relative; z-index:10;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: calc(100vh - 160px);
+}
+
+/* ── SIDEBAR ── */
+aside {
+  border-right: 1px solid var(--border);
+  padding: 28px 0;
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 160px);
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+aside::-webkit-scrollbar { width: 2px; }
+aside::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.aside-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  padding: 0 20px 12px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  border-left: 2px solid transparent;
+  transition: all .15s;
+  line-height: 1.4;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.03); }
+.nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(232,255,0,.04); }
+.nav-item.done { color: var(--accent3); }
+.nav-item.done .ndot { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+.nav-item.active .ndot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+.ndot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border2);
+  flex-shrink: 0;
+  transition: all .2s;
+}
+
+.nnum {
+  font-size: 9px;
+  color: var(--border2);
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.nav-item.active .nnum { color: var(--accent); }
+
+/* progress */
+.progress-wrap {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}
+.prog-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+.prog-bar { height: 2px; background: var(--border); }
+.prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent3));
+  transition: width .4s ease;
+  width: 0%;
+}
+
+/* ── MAIN ── */
+main { padding: 44px 52px; max-width: 860px; }
+
+.step { display: none; animation: fi .25s ease; }
+.step.active { display: block; }
+@keyframes fi { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+
+/* step header */
+.step-head {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  margin-bottom: 30px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.big-num {
+  font-family: var(--font-mono);
+  font-size: 64px;
+  font-weight: 700;
+  color: var(--accent);
+  opacity: .12;
+  line-height: 1;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.step-head-right h2 {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-hi);
+  margin-bottom: 8px;
+}
+
+.step-desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.8;
+}
+
+/* section titles */
+.st {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin: 30px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(232,255,0,.12);
+}
+
+/* prose */
+p { font-size: 13px; line-height: 1.9; color: var(--text); margin-bottom: 10px; }
+strong { color: var(--text-hi); font-weight: 600; }
+code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(232,255,0,.08);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+/* boxes */
+.box {
+  padding: 14px 18px;
+  margin: 16px 0;
+  border-left: 2px solid var(--accent4);
+  background: rgba(77,166,255,.05);
+  border-radius: 0 3px 3px 0;
+}
+.box.warn { border-color: var(--accent2); background: rgba(255,60,60,.05); }
+.box.ok   { border-color: var(--accent3); background: rgba(0,255,153,.05); }
+.box.note { border-color: var(--accent);  background: rgba(232,255,0,.04); }
+
+.box-title {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent4);
+  margin-bottom: 7px;
+}
+.box.warn .box-title { color: var(--accent2); }
+.box.ok   .box-title { color: var(--accent3); }
+.box.note .box-title { color: var(--accent); }
+
+.box p, .box li { font-size: 12px; line-height: 1.8; }
+.box ul { padding-left: 18px; }
+
+/* code blocks */
+.cb {
+  background: var(--code-bg);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  margin: 14px 0;
+  overflow: hidden;
+}
+
+.cb-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+}
+
+.cb-lang {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.copy-btn {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 3px 10px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all .15s;
+}
+.copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+.copy-btn.cp { color: var(--accent3); border-color: var(--accent3); }
+
+pre {
+  padding: 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.75;
+  color: #bbb;
+  overflow-x: auto;
+}
+pre::-webkit-scrollbar { height: 3px; }
+pre::-webkit-scrollbar-thumb { background: var(--border2); }
+
+/* syntax */
+.kw  { color: #ff79c6; }
+.fn  { color: #8be9fd; }
+.str { color: #f1fa8c; }
+.cm  { color: #4a4a5a; font-style: italic; }
+.num { color: #bd93f9; }
+.op  { color: #ff6e6e; }
+.hi  { color: var(--accent); font-weight: 600; }
+.g   { color: var(--accent3); }
+
+/* diagram */
+.diagram {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.9;
+  background: var(--code-bg);
+  border: 1px solid var(--border2);
+  padding: 20px 22px;
+  border-radius: 4px;
+  margin: 14px 0;
+  white-space: pre;
+  overflow-x: auto;
+  color: #888;
+}
+.diagram .y { color: var(--accent); font-weight: 600; }
+.diagram .g { color: var(--accent3); font-weight: 600; }
+.diagram .r { color: var(--accent2); font-weight: 600; }
+.diagram .b { color: var(--accent4); font-weight: 600; }
+
+/* table */
+table { width:100%; border-collapse:collapse; margin:14px 0; font-size:12px; }
+th {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border2);
+  padding: 7px 10px;
+  text-align: left;
+}
+td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.04); color: var(--text); line-height:1.5; }
+td.mono { font-family: var(--font-mono); font-size: 11px; color: var(--accent4); }
+tr:hover td { background: rgba(255,255,255,.02); }
+.tg { color: var(--accent3); font-family: var(--font-mono); font-size: 10px; }
+.tr { color: var(--accent2); font-family: var(--font-mono); font-size: 10px; }
+
+/* checklist */
+.cl { list-style:none; margin: 14px 0; }
+.cl li {
+  display:flex; align-items:flex-start; gap:10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  cursor: pointer;
+  transition: all .15s;
+}
+.cl li:hover { padding-left: 4px; }
+.cbox {
+  width:16px; height:16px;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; margin-top:2px;
+  font-size:10px;
+  transition: all .2s;
+}
+.cl li.ck .cbox { background: var(--accent3); border-color: var(--accent3); color:#000; box-shadow:0 0 8px rgba(0,255,153,.3); }
+.cl li.ck .ct { color: var(--text-dim); text-decoration: line-through; }
+.ct { font-size: 12px; line-height: 1.6; }
+
+/* nav buttons */
+.nav-btns {
+  display:flex; gap:10px;
+  margin-top: 40px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 10px 22px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: none;
+  letter-spacing: 1px;
+  transition: all .15s;
+}
+.btn-p { background: var(--accent); color: #000; font-weight: 700; }
+.btn-p:hover { background: #f5ff40; box-shadow: 0 0 16px rgba(232,255,0,.35); }
+.btn-s { background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
+.btn-s:hover { color: var(--text); border-color: #555; }
+.btn-c { background: transparent; color: var(--accent3); border: 1px solid var(--accent3); }
+.btn-c:hover { background: rgba(0,255,153,.08); }
+.btn-c.done-btn { background: var(--accent3); color: #000; font-weight:700; }
+
+@media(max-width:768px){
+  .layout { grid-template-columns:1fr; }
+  aside { display:none; }
+  main { padding:24px 20px; }
+  header { grid-template-columns:1fr; padding:36px 20px 24px; }
+  .header-right { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="eyebrow">// cross-compilation lab</div>
+    <h1>AArch64 交叉编译<br><span class="y">ONNX Runtime</span> 实验教程</h1>
+    <p class="tagline">从零开始，在 Windows WSL2 上为飞腾/麒麟 ARM64 编译 C++ 推理程序。设有最简模型作为实验样本，每步可独立验证。</p>
+  </div>
+  <div class="header-right">
+    <div class="stat-pill">目标架构 <span>AArch64</span></div>
+    <div class="stat-pill">宿主机 <span>x86_64 WSL2</span></div>
+    <div class="stat-pill">编译器 <span>GCC aarch64-linux-gnu</span></div>
+    <div class="stat-pill">ONNX Runtime <span>1.17.3</span></div>
+  </div>
+</header>
+
+<div class="layout">
+<aside>
+  <div class="aside-label">// 章节</div>
+  <div id="navlist"></div>
+  <div class="progress-wrap">
+    <div class="prog-label"><span>进度</span><span id="ptxt">0 / 6</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="pfill"></div></div>
+  </div>
+</aside>
+
+<main>
+
+<!-- ══ STEP 0 ══ -->
+<section class="step active" id="step-0">
+  <div class="step-head">
+    <div class="big-num">00</div>
+    <div class="step-head-right">
+      <h2>理解交叉编译的全局流程</h2>
+      <p class="step-desc">动手前先建立清晰的心智模型：每一步在做什么、产出是什么、如何验证</p>
+    </div>
+  </div>
+
+  <div class="st">// 什么是交叉编译</div>
+  <p>普通编译是"在A机器上编译，产物也在A上跑"。交叉编译是<strong>"在A机器上编译，但产物要在B机器上跑"</strong>。A是你的x86 Win/WSL2，B是飞腾AArch64。</p>
+
+  <div class="diagram"><span class="y">[ 宿主机 Host ]</span>                    <span class="b">[ 目标机 Target ]</span>
+  x86_64 WSL2 Ubuntu                    AArch64 飞腾/麒麟
+
+  源代码 (.cpp / .c)
+       │
+       ▼
+  <span class="y">aarch64-linux-gnu-g++</span>   ──────────►  <span class="g">可执行文件 (ELF AArch64)</span>
+  （交叉编译器）                           直接在飞腾上运行
+       │
+       │  同时需要
+       ▼
+  <span class="b">AArch64版 ONNX Runtime</span>
+  libonnxruntime.so (arm64)  ──────────►  一起拷贝到目标机</div>
+
+  <div class="st">// 本实验的目标</div>
+  <p>我们会编译一个<strong>最简C++推理程序</strong>，它做一件事：</p>
+  <div class="box note">
+    <div class="box-title">实验模型说明</div>
+    <p>输入：4个float（模拟4维特征向量）<br>
+    模型：单层全连接 Linear(4→2)，用Python生成并导出为ONNX<br>
+    输出：2个float（模拟二分类得分）<br>
+    C++程序：加载此ONNX，跑一次推理，打印结果</p>
+  </div>
+
+  <div class="st">// 六步全景</div>
+  <table>
+    <tr><th>#</th><th>步骤</th><th>产出物</th><th>验证方式</th></tr>
+    <tr><td class="mono">01</td><td>准备WSL2交叉编译环境</td><td>aarch64-linux-gnu-g++ 可用</td><td>编译Hello World验证</td></tr>
+    <tr><td class="mono">02</td><td>生成实验ONNX模型</td><td>tiny_model.onnx</td><td>Python本机推理验证</td></tr>
+    <tr><td class="mono">03</td><td>获取AArch64版ONNX Runtime</td><td>libonnxruntime.so (arm64)</td><td>file命令验证架构</td></tr>
+    <tr><td class="mono">04</td><td>编写C++推理代码</td><td>infer.cpp</td><td>代码审查</td></tr>
+    <tr><td class="mono">05</td><td>交叉编译</td><td>infer (ELF AArch64可执行)</td><td>file命令 + QEMU运行</td></tr>
+    <tr><td class="mono">06</td><td>在ARM64容器中运行验证</td><td>推理输出结果</td><td>和Python结果对比</td></tr>
+  </table>
+
+  <div class="box warn">
+    <div class="box-title">⚠️ 和上一个教程的关键区别</div>
+    <p>上一个教程：Python写推理逻辑，pip装ONNX Runtime，HTTP接口，<strong>不需要编译任何东西</strong>。<br><br>
+    本教程：C++写推理逻辑，需要<strong>手动链接AArch64的.so库</strong>，产物是一个AArch64二进制，<strong>在x86机器上跑不起来</strong>。</p>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-p" onclick="go(1)">开始实验 →</button>
+  </div>
+</section>
+
+<!-- ══ STEP 1 ══ -->
+<section class="step" id="step-1">
+  <div class="step-head">
+    <div class="big-num">01</div>
+    <div class="step-head-right">
+      <h2>准备交叉编译环境</h2>
+      <p class="step-desc">安装 AArch64 交叉编译工具链，验证能产出正确架构的二进制</p>
+    </div>
+  </div>
+
+  <div class="st">// 1.1 安装工具链</div>
+  <p>在 WSL2 Ubuntu 中运行：</p>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre><span class="cm"># 安装 AArch64 交叉编译器和相关工具</span>
+sudo apt update
+sudo apt install <span class="op">-y</span> \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    binutils-aarch64-linux-gnu \
+    qemu-user-static \
+    file
+
+<span class="cm"># 验证编译器安装成功</span>
+aarch64-linux-gnu-g++ --version
+<span class="cm"># 期望输出: aarch64-linux-gnu-g++ (Ubuntu ...) 11.x.x</span></pre>
+  </div>
+
+  <div class="st">// 1.2 编译一个最简 Hello World 验证工具链</div>
+  <p>这一步只为确认工具链工作正常，和ONNX无关：</p>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre><span class="cm"># 创建测试目录</span>
+mkdir -p ~/cross-lab && cd ~/cross-lab
+
+<span class="cm"># 写一个最简C++文件</span>
+cat > hello.cpp <span class="op">&lt;&lt;</span><span class="str">'EOF'</span>
+<span class="kw">#include</span> <span class="str">&lt;iostream&gt;</span>
+<span class="kw">int</span> <span class="fn">main</span>() {
+    std::cout <span class="op">&lt;&lt;</span> <span class="str">"Hello from AArch64!\n"</span>;
+    <span class="kw">return</span> <span class="num">0</span>;
+}
+EOF
+
+<span class="cm"># 用交叉编译器编译</span>
+aarch64-linux-gnu-g++ hello.cpp <span class="op">-o</span> hello_arm64
+
+<span class="cm"># ★ 关键验证：查看产物架构</span>
+file hello_arm64</pre>
+  </div>
+
+  <div class="box ok">
+    <div class="box-title">✓ 期望输出</div>
+    <p><code>hello_arm64: ELF 64-bit LSB pie executable, ARM aarch64</code><br>
+    看到 <strong>ARM aarch64</strong> 就说明交叉编译器工作正常。</p>
+  </div>
+
+  <div class="st">// 1.3 用 QEMU 在 x86 机器上直接运行 AArch64 程序</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre><span class="cm"># QEMU用户模式模拟：直接在x86上运行AArch64程序</span>
+qemu-aarch64-static hello_arm64
+
+<span class="cm"># 期望输出: Hello from AArch64!</span>
+<span class="cm"># 这等于在"模拟的飞腾CPU"上运行了这个程序</span></pre>
+  </div>
+
+  <div class="box">
+    <div class="box-title">💡 两种验证方式的区别</div>
+    <ul>
+      <li><code>file hello_arm64</code> — 静态检查：看文件头，确认是AArch64格式</li>
+      <li><code>qemu-aarch64-static hello_arm64</code> — 动态验证：真正模拟执行，确认程序能运行</li>
+    </ul>
+  </div>
+
+  <ul class="cl">
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">aarch64-linux-gnu-g++ --version 输出正常</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">file hello_arm64 显示 ARM aarch64</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">qemu-aarch64-static hello_arm64 输出 Hello from AArch64!</span></li>
+  </ul>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="go(0)">← 返回</button>
+    <button class="btn btn-c" id="c1" onclick="done(1)">标记完成</button>
+    <button class="btn btn-p" onclick="go(2)">下一步 →</button>
+  </div>
+</section>
+
+<!-- ══ STEP 2 ══ -->
+<section class="step" id="step-2">
+  <div class="step-head">
+    <div class="big-num">02</div>
+    <div class="step-head-right">
+      <h2>生成实验用 ONNX 模型</h2>
+      <p class="step-desc">用Python生成一个最简单的全连接模型，导出ONNX，并在本机验证推理结果</p>
+    </div>
+  </div>
+
+  <div class="box note">
+    <div class="box-title">为什么用Python生成模型</div>
+    <p>ONNX文件本身与平台无关。在x86 Win/WSL2上生成的 .onnx 文件，直接拷到飞腾上就能用，不需要在AArch64上重新生成。</p>
+  </div>
+
+  <div class="st">// 2.1 在 WSL2 里安装 Python 依赖</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre>pip3 install torch onnx onnxruntime numpy \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple</pre>
+  </div>
+
+  <div class="st">// 2.2 生成模型并导出 ONNX</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash — 创建 gen_model.py</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre>cat > ~/cross-lab/gen_model.py <span class="op">&lt;&lt;</span><span class="str">'EOF'</span>
+<span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn, numpy <span class="kw">as</span> np
+
+<span class="cm"># ── 定义最简模型：Linear(4→2) ──</span>
+<span class="kw">class</span> <span class="fn">TinyModel</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        <span class="fn">super</span>().__init__()
+        <span class="cm"># 固定权重，方便后续验证C++结果是否一致</span>
+        self.fc = nn.<span class="fn">Linear</span>(<span class="num">4</span>, <span class="num">2</span>, bias=<span class="kw">True</span>)
+        nn.init.<span class="fn">constant_</span>(self.fc.weight, <span class="num">0.5</span>)
+        nn.init.<span class="fn">constant_</span>(self.fc.bias, <span class="num">0.1</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="kw">return</span> self.<span class="fn">fc</span>(x)
+
+model = <span class="fn">TinyModel</span>().eval()
+
+<span class="cm"># ── 固定输入，用于验证 ──</span>
+dummy = torch.<span class="fn">tensor</span>([[<span class="num">1.0</span>, <span class="num">2.0</span>, <span class="num">3.0</span>, <span class="num">4.0</span>]])
+
+<span class="cm"># ── Python本机推理结果（作为基准）──</span>
+<span class="kw">with</span> torch.no_grad():
+    out = <span class="fn">model</span>(dummy)
+<span class="fn">print</span>(<span class="fn">f</span><span class="str">"[Python基准] 输入: {dummy.numpy()}"</span>)
+<span class="fn">print</span>(<span class="fn">f</span><span class="str">"[Python基准] 输出: {out.numpy()}"</span>)
+<span class="cm"># 预期: weight=0.5, bias=0.1</span>
+<span class="cm"># out[0] = 1*0.5+2*0.5+3*0.5+4*0.5+0.1 = 5.1+0.1 = 5.1（两个神经元相同）</span>
+
+<span class="cm"># ── 导出 ONNX ──</span>
+torch.onnx.<span class="fn">export</span>(
+    model, dummy,
+    <span class="str">"tiny_model.onnx"</span>,
+    export_params=<span class="kw">True</span>,
+    opset_version=<span class="num">11</span>,
+    input_names=[<span class="str">'input'</span>],
+    output_names=[<span class="str">'output'</span>],
+)
+<span class="fn">print</span>(<span class="str">"\n✓ 导出: tiny_model.onnx"</span>)
+
+<span class="cm"># ── 用 ONNX Runtime 在本机再验证一次 ──</span>
+<span class="kw">import</span> onnxruntime <span class="kw">as</span> ort
+sess = ort.<span class="fn">InferenceSession</span>(<span class="str">"tiny_model.onnx"</span>)
+inp = np.<span class="fn">array</span>([[<span class="num">1.0</span>, <span class="num">2.0</span>, <span class="num">3.0</span>, <span class="num">4.0</span>]], dtype=np.float32)
+res = sess.<span class="fn">run</span>(<span class="kw">None</span>, {<span class="str">'input'</span>: inp})
+<span class="fn">print</span>(<span class="fn">f</span><span class="str">"[ONNX本机] 输出: {res[0]}"</span>)
+<span class="fn">print</span>(<span class="str">"✓ Python/ONNX结果一致，记下这个数值，最后和C++结果对比！"</span>)
+EOF
+
+python3 ~/cross-lab/gen_model.py</pre>
+  </div>
+
+  <div class="box ok">
+    <div class="box-title">✓ 期望输出（记下这个数值！）</div>
+    <p><code>[Python基准] 输出: [[5.1 5.1]]</code><br>
+    <code>[ONNX本机]  输出: [[5.1 5.1]]</code><br><br>
+    这是你的<strong>基准值</strong>。最后C++程序在AArch64上的输出必须和这个一致，否则说明哪里出了问题。</p>
+  </div>
+
+  <div class="st">// 2.3 查看 ONNX 模型信息</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre><span class="cm"># 查看模型的输入输出规格（C++代码要用到这些名字）</span>
+python3 -c <span class="str">"
+import onnx
+m = onnx.load('tiny_model.onnx')
+for i in m.graph.input:
+    print('输入名称:', i.name,
+          '| 形状:', [d.dim_value for d in i.type.tensor_type.shape.dim],
+          '| 类型: float32')
+for o in m.graph.output:
+    print('输出名称:', o.name,
+          '| 形状:', [d.dim_value for d in o.type.tensor_type.shape.dim])
+"</span>
+<span class="cm"># 期望:
+# 输入名称: input  | 形状: [1, 4] | 类型: float32
+# 输出名称: output | 形状: [1, 2]</span></pre>
+  </div>
+
+  <ul class="cl">
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">tiny_model.onnx 生成成功</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">记下了Python基准输出值 [[5.1, 5.1]]</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">确认输入名称为 "input"，形状 [1,4]</span></li>
+  </ul>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="go(1)">← 返回</button>
+    <button class="btn btn-c" id="c2" onclick="done(2)">标记完成</button>
+    <button class="btn btn-p" onclick="go(3)">下一步 →</button>
+  </div>
+</section>
+
+<!-- ══ STEP 3 ══ -->
+<section class="step" id="step-3">
+  <div class="step-head">
+    <div class="big-num">03</div>
+    <div class="step-head-right">
+      <h2>获取 AArch64 版 ONNX Runtime</h2>
+      <p class="step-desc">这是交叉编译里最关键的一步：链接的 .so 库必须是 AArch64 架构，否则目标机上无法运行</p>
+    </div>
+  </div>
+
+  <div class="box note">
+    <div class="box-title">💡 为什么不能用系统里已有的 ONNX Runtime</div>
+    <p>你的 WSL2 是 x86_64，pip install 装的 onnxruntime 也是 x86_64 版本的 .so 文件。把这个 .so 拷到 AArch64 机器上，<strong>完全无法加载</strong>（ELF格式不兼容）。必须单独获取 AArch64 版本。</p>
+  </div>
+
+  <div class="st">// 方案A：从 ONNX Runtime 官方 Release 直接下载预编译包（最省事）</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre>cd ~/cross-lab
+mkdir -p onnxruntime-arm64
+
+<span class="cm"># 下载官方 AArch64 预编译包</span>
+wget https://github.com/microsoft/onnxruntime/releases/download/v1.17.3/onnxruntime-linux-aarch64-1.17.3.tgz
+
+<span class="cm"># 解压</span>
+tar -xzf onnxruntime-linux-aarch64-1.17.3.tgz
+
+<span class="cm"># 重命名方便引用</span>
+mv onnxruntime-linux-aarch64-1.17.3 onnxruntime-arm64/
+
+<span class="cm"># 查看目录结构</span>
+ls onnxruntime-arm64/
+<span class="cm"># 期望：include/  lib/</span>
+
+ls onnxruntime-arm64/lib/
+<span class="cm"># 期望：libonnxruntime.so  libonnxruntime.so.1.17.3 等</span></pre>
+  </div>
+
+  <div class="st">// 验证：确认 .so 文件确实是 AArch64</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre><span class="cm"># ★ 最重要的验证步骤</span>
+file onnxruntime-arm64/lib/libonnxruntime.so.1.17.3</pre>
+  </div>
+
+  <div class="box ok">
+    <div class="box-title">✓ 期望输出</div>
+    <p><code>libonnxruntime.so.1.17.3: ELF 64-bit LSB shared object, <strong>ARM aarch64</strong></code><br><br>
+    看到 <strong>ARM aarch64</strong> 才是正确的。如果显示 x86-64，说明下载错版本了。</p>
+  </div>
+
+  <div class="st">// 方案B：如果下载慢，从 ARM64 Docker 容器里提取</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash（备选方案）</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre"><span class="cm"># 启动ARM64容器，装好onnxruntime后把.so复制出来</span>
+docker run --platform linux/arm64 --name tmp-arm64 \
+    arm64v8/python:3.10-slim \
+    pip install onnxruntime==1.17.3 \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+<span class="cm"># 找到 .so 在容器里的位置</span>
+docker run --platform linux/arm64 --rm arm64v8/python:3.10-slim \
+    find /usr -name "libonnxruntime*.so*" 2>/dev/null
+
+<span class="cm"># 从容器中复制出来</span>
+docker cp tmp-arm64:/usr/local/lib/python3.10/site-packages/onnxruntime/capi/libonnxruntime.so.1.17.3 \
+    ~/cross-lab/onnxruntime-arm64/lib/
+
+docker rm tmp-arm64
+
+<span class="cm"># 同样用 file 验证</span>
+file ~/cross-lab/onnxruntime-arm64/lib/libonnxruntime.so.1.17.3</pre>
+  </div>
+
+  <div class="st">// 查看头文件（C++代码要 include 这里）</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre">ls onnxruntime-arm64/include/
+<span class="cm"># 期望看到: onnxruntime_cxx_api.h  onnxruntime_c_api.h 等
+# 这些头文件是平台无关的，同一份可以在x86和arm64编译时使用</span></pre>
+  </div>
+
+  <ul class="cl">
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">libonnxruntime.so.1.17.3 下载完成</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">file 命令确认显示 ARM aarch64</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">include/ 目录下有 onnxruntime_cxx_api.h</span></li>
+  </ul>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="go(2)">← 返回</button>
+    <button class="btn btn-c" id="c3" onclick="done(3)">标记完成</button>
+    <button class="btn btn-p" onclick="go(4)">下一步 →</button>
+  </div>
+</section>
+
+<!-- ══ STEP 4 ══ -->
+<section class="step" id="step-4">
+  <div class="step-head">
+    <div class="big-num">04</div>
+    <div class="step-head-right">
+      <h2>编写 C++ 推理代码</h2>
+      <p class="step-desc">编写调用 ONNX Runtime C++ API 的推理程序，注释说明每一行的作用</p>
+    </div>
+  </div>
+
+  <div class="box note">
+    <div class="box-title">📌 头文件是平台无关的，只有 .so 是平台相关的</div>
+    <p>你在这里写的 <code>#include "onnxruntime_cxx_api.h"</code>，这个头文件在x86和arm64上内容完全一样。平台差异只体现在链接时用哪个 .so 文件。</p>
+  </div>
+
+  <div class="st">// 创建 infer.cpp</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash — 创建 infer.cpp</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre>cat > ~/cross-lab/infer.cpp <span class="op">&lt;&lt;</span><span class="str">'EOF'</span>
+<span class="kw">#include</span> <span class="str">&lt;iostream&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;vector&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;string&gt;</span>
+<span class="kw">#include</span> <span class="str">"onnxruntime_cxx_api.h"</span>   <span class="cm">// ONNX Runtime C++ API</span>
+
+<span class="kw">int</span> <span class="fn">main</span>(<span class="kw">int</span> argc, <span class="kw">char</span>* argv[]) {
+
+    <span class="cm">// ── 1. 确定模型路径（从命令行参数或默认值）──</span>
+    std::string model_path = (argc > <span class="num">1</span>) ? argv[<span class="num">1</span>] : <span class="str">"tiny_model.onnx"</span>;
+    std::cout << <span class="str">"加载模型: "</span> << model_path << <span class="str">"\n"</span>;
+
+    <span class="cm">// ── 2. 初始化 ONNX Runtime 环境 ──</span>
+    <span class="cm">// ORT_LOGGING_LEVEL_WARNING: 只显示警告以上的日志</span>
+    Ort::Env env(ORT_LOGGING_LEVEL_WARNING, <span class="str">"InferTest"</span>);
+
+    <span class="cm">// ── 3. 配置 Session 选项 ──</span>
+    Ort::SessionOptions session_options;
+    session_options.SetIntraOpNumThreads(<span class="num">1</span>);   <span class="cm">// 单线程，便于实验</span>
+    session_options.SetGraphOptimizationLevel(
+        GraphOptimizationLevel::ORT_ENABLE_BASIC
+    );
+
+    <span class="cm">// ── 4. 加载模型，创建推理 Session ──</span>
+    Ort::Session session(env, model_path.c_str(), session_options);
+    std::cout << <span class="str">"模型加载成功\n"</span>;
+
+    <span class="cm">// ── 5. 获取输入输出信息 ──</span>
+    Ort::AllocatorWithDefaultOptions allocator;
+
+    <span class="cm">// 输入节点名称（对应 Python 导出时的 input_names=['input']）</span>
+    auto input_name_ptr = session.GetInputNameAllocated(<span class="num">0</span>, allocator);
+    std::string input_name(input_name_ptr.get());
+
+    <span class="cm">// 输出节点名称</span>
+    auto output_name_ptr = session.GetOutputNameAllocated(<span class="num">0</span>, allocator);
+    std::string output_name(output_name_ptr.get());
+
+    std::cout << <span class="str">"输入名: "</span> << input_name
+              << <span class="str">" | 输出名: "</span> << output_name << <span class="str">"\n"</span>;
+
+    <span class="cm">// ── 6. 准备输入数据 ──</span>
+    <span class="cm">// 和 Python 验证时一样的输入：[1.0, 2.0, 3.0, 4.0]</span>
+    std::vector&lt;float&gt; input_data = {<span class="num">1.0f</span>, <span class="num">2.0f</span>, <span class="num">3.0f</span>, <span class="num">4.0f</span>};
+
+    <span class="cm">// 输入张量的形状：batch_size=1, features=4</span>
+    std::vector&lt;int64_t&gt; input_shape = {<span class="num">1</span>, <span class="num">4</span>};
+
+    <span class="cm">// ── 7. 创建输入 Tensor ──</span>
+    <span class="cm">// Tensor 是 ONNX Runtime 的数据容器</span>
+    auto memory_info = Ort::MemoryInfo::CreateCpu(
+        OrtAllocatorType::OrtArenaAllocator,
+        OrtMemType::OrtMemTypeDefault
+    );
+
+    Ort::Value input_tensor = Ort::Value::CreateTensor&lt;float&gt;(
+        memory_info,
+        input_data.data(),      <span class="cm">// 数据指针</span>
+        input_data.size(),      <span class="cm">// 元素个数</span>
+        input_shape.data(),     <span class="cm">// 形状数组</span>
+        input_shape.size()      <span class="cm">// 形状维度数</span>
+    );
+
+    <span class="cm">// ── 8. 执行推理 ──</span>
+    const char* input_names[]  = {input_name.c_str()};
+    const char* output_names[] = {output_name.c_str()};
+
+    auto output_tensors = session.Run(
+        Ort::RunOptions{nullptr},
+        input_names,    <span class="num">1</span>,      <span class="cm">// 输入名称数组，数量</span>
+        &input_tensor,  <span class="num">1</span>,      <span class="cm">// 输入Tensor数组，数量</span>
+        output_names,   <span class="num">1</span>       <span class="cm">// 输出名称数组，数量</span>
+    );
+
+    <span class="cm">// ── 9. 获取输出结果 ──</span>
+    float* output_data = output_tensors[<span class="num">0</span>].GetTensorMutableData&lt;float&gt;();
+    auto output_shape  = output_tensors[<span class="num">0</span>].GetTensorTypeAndShapeInfo().GetShape();
+
+    std::cout << <span class="str">"\n=== 推理结果 ===\n"</span>;
+    std::cout << <span class="str">"输入:  [1.0, 2.0, 3.0, 4.0]\n"</span>;
+    std::cout << <span class="str">"输出:  ["</span>;
+    <span class="kw">for</span> (int64_t i = <span class="num">0</span>; i < output_shape[<span class="num">1</span>]; ++i) {
+        if (i > <span class="num">0</span>) std::cout << <span class="str">", "</span>;
+        std::cout << output_data[i];
+    }
+    std::cout << <span class="str">"]\n"</span>;
+    std::cout << <span class="str">"期望:  [5.1, 5.1]  ← 应与Python结果一致\n"</span>;
+
+    return <span class="num">0</span>;
+}
+EOF
+
+echo "✓ infer.cpp 创建完成"</pre>
+  </div>
+
+  <div class="box">
+    <div class="box-title">📖 关键API对照（Python vs C++）</div>
+    <table>
+      <tr><th>操作</th><th>Python</th><th>C++</th></tr>
+      <tr><td>创建Session</td><td class="mono">ort.InferenceSession(path)</td><td class="mono">Ort::Session(env, path, opts)</td></tr>
+      <tr><td>获取输入名</td><td class="mono">sess.get_inputs()[0].name</td><td class="mono">GetInputNameAllocated(0, alloc)</td></tr>
+      <tr><td>执行推理</td><td class="mono">sess.run(None, {name: arr})</td><td class="mono">session.Run(...)</td></tr>
+      <tr><td>获取输出</td><td class="mono">result[0]</td><td class="mono">GetTensorMutableData&lt;float&gt;()</td></tr>
+    </table>
+  </div>
+
+  <ul class="cl">
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">infer.cpp 文件创建完成</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">理解了输入 Tensor 的创建方式</span></li>
+  </ul>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="go(3)">← 返回</button>
+    <button class="btn btn-c" id="c4" onclick="done(4)">标记完成</button>
+    <button class="btn btn-p" onclick="go(5)">下一步 →</button>
+  </div>
+</section>
+
+<!-- ══ STEP 5 ══ -->
+<section class="step" id="step-5">
+  <div class="step-head">
+    <div class="big-num">05</div>
+    <div class="step-head-right">
+      <h2>交叉编译</h2>
+      <p class="step-desc">用 aarch64-linux-gnu-g++ 把 infer.cpp 编译成 AArch64 可执行文件</p>
+    </div>
+  </div>
+
+  <div class="st">// 5.1 确认目录结构</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre">cd ~/cross-lab && ls
+<span class="cm"># 期望看到：
+# hello.cpp           ← 步骤01的测试文件
+# hello_arm64         ← 步骤01的测试产物
+# gen_model.py        ← 步骤02的模型生成脚本
+# tiny_model.onnx     ← 步骤02生成的模型
+# onnxruntime-arm64/  ← 步骤03的AArch64运行时
+#   ├── include/
+#   └── lib/
+# infer.cpp           ← 步骤04的C++代码</span></pre>
+  </div>
+
+  <div class="st">// 5.2 执行交叉编译</div>
+  <p>这是整个教程最核心的一条命令，每个参数都有明确含义：</p>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre">cd ~/cross-lab
+
+aarch64-linux-gnu-g++ \
+    infer.cpp \
+    -o infer_arm64 \
+    -I ./onnxruntime-arm64/include \
+    -L ./onnxruntime-arm64/lib \
+    -lonnxruntime \
+    -Wl,-rpath,'$ORIGIN/lib' \
+    -std=c++17 \
+    -O2
+
+echo "编译完成，返回码: $?"</pre>
+  </div>
+
+  <div class="box">
+    <div class="box-title">📖 每个编译参数的含义</div>
+    <table>
+      <tr><th>参数</th><th>含义</th></tr>
+      <tr><td class="mono">aarch64-linux-gnu-g++</td><td>用 AArch64 交叉编译器，不是普通的 g++</td></tr>
+      <tr><td class="mono">infer.cpp</td><td>源文件</td></tr>
+      <tr><td class="mono">-o infer_arm64</td><td>输出文件名</td></tr>
+      <tr><td class="mono">-I ./onnxruntime-arm64/include</td><td>头文件搜索路径（找 .h 文件）</td></tr>
+      <tr><td class="mono">-L ./onnxruntime-arm64/lib</td><td>库文件搜索路径（找 .so 文件）</td></tr>
+      <tr><td class="mono">-lonnxruntime</td><td>链接 libonnxruntime.so</td></tr>
+      <tr><td class="mono">-Wl,-rpath,'$ORIGIN/lib'</td><td>运行时在自身同级 lib/ 目录里找 .so</td></tr>
+      <tr><td class="mono">-std=c++17</td><td>使用 C++17 标准</td></tr>
+      <tr><td class="mono">-O2</td><td>开启优化</td></tr>
+    </table>
+  </div>
+
+  <div class="st">// 5.3 验证产物架构</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre"><span class="cm"># 验证1：文件格式</span>
+file infer_arm64
+<span class="cm"># 期望: ELF 64-bit LSB pie executable, ARM aarch64</span>
+
+<span class="cm"># 验证2：查看动态链接依赖</span>
+aarch64-linux-gnu-readelf -d infer_arm64 | grep NEEDED
+<span class="cm"># 期望看到: libonnxruntime.so.1.17.3
+#           libstdc++.so.6
+#           libm.so.6
+#           libc.so.6</span>
+
+<span class="cm"># 验证3：在x86上直接运行会失败（这是正常的！）</span>
+./infer_arm64
+<span class="cm"># 期望: cannot execute binary file: Exec format error
+# 这说明它确实是AArch64程序，在x86上跑不起来</span></pre>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title">⚠️ "Exec format error" 是正确的！</div>
+    <p>交叉编译的目的就是生成<strong>只能在目标机上运行</strong>的程序。在x86 WSL2上直接运行 AArch64 程序本来就会报这个错。下一步我们用 QEMU 来运行它。</p>
+  </div>
+
+  <div class="st">// 5.4 整理输出目录</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre"><span class="cm"># 建立最终部署目录（模拟要拷到飞腾机器上的内容）</span>
+mkdir -p ~/cross-lab/deploy/lib
+
+<span class="cm"># 可执行文件</span>
+cp infer_arm64 ~/cross-lab/deploy/
+
+<span class="cm"># 模型文件</span>
+cp tiny_model.onnx ~/cross-lab/deploy/
+
+<span class="cm"># AArch64 版 .so 库（必须一起带走）</span>
+cp onnxruntime-arm64/lib/libonnxruntime.so.1.17.3 ~/cross-lab/deploy/lib/
+cd ~/cross-lab/deploy/lib
+ln -sf libonnxruntime.so.1.17.3 libonnxruntime.so.1
+ln -sf libonnxruntime.so.1      libonnxruntime.so
+
+ls -la ~/cross-lab/deploy/
+<span class="cm"># deploy/
+# ├── infer_arm64           ← 可执行文件（AArch64）
+# ├── tiny_model.onnx       ← 模型（平台无关）
+# └── lib/
+#     ├── libonnxruntime.so       → libonnxruntime.so.1
+#     ├── libonnxruntime.so.1     → libonnxruntime.so.1.17.3
+#     └── libonnxruntime.so.1.17.3</span></pre>
+  </div>
+
+  <ul class="cl">
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">编译命令执行成功，无报错</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">file infer_arm64 显示 ARM aarch64</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">在x86上直接运行报 Exec format error（说明架构正确）</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">deploy/ 目录结构整理完成</span></li>
+  </ul>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="go(4)">← 返回</button>
+    <button class="btn btn-c" id="c5" onclick="done(5)">标记完成</button>
+    <button class="btn btn-p" onclick="go(6)">下一步 →</button>
+  </div>
+</section>
+
+<!-- ══ STEP 6 ══ -->
+<section class="step" id="step-6">
+  <div class="step-head">
+    <div class="big-num">06</div>
+    <div class="step-head-right">
+      <h2>在 ARM64 环境中运行验证</h2>
+      <p class="step-desc">用 Docker ARM64 容器模拟飞腾机器，确认 C++ 推理程序输出与 Python 基准一致</p>
+    </div>
+  </div>
+
+  <div class="st">// 6.1 用 QEMU 用户模式直接运行（最简单）</div>
+  <p>qemu-aarch64-static 可以直接在x86上执行AArch64程序，但需要手动指定库路径：</p>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre">cd ~/cross-lab/deploy
+
+<span class="cm"># 用QEMU直接运行（-L 指定AArch64的系统库路径）</span>
+qemu-aarch64-static \
+    -L /usr/aarch64-linux-gnu \
+    ./infer_arm64 ./tiny_model.onnx</pre>
+  </div>
+
+  <div class="st">// 6.2 用 Docker ARM64 容器运行（最接近真实环境）</div>
+  <p>这是最准确的模拟方式，和真正的飞腾机器几乎等价：</p>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre">cd ~/cross-lab
+
+<span class="cm"># 启动 AArch64 容器，挂载 deploy 目录</span>
+docker run --rm \
+    --platform linux/arm64 \
+    -v $(pwd)/deploy:/app \
+    arm64v8/debian:bookworm-slim \
+    /bin/bash -c "
+        echo '=== 验证运行环境 ==='
+        uname -m
+        echo ''
+        echo '=== 验证 .so 能被加载 ==='
+        ldd /app/infer_arm64
+        echo ''
+        echo '=== 执行推理 ==='
+        cd /app && LD_LIBRARY_PATH=./lib ./infer_arm64 ./tiny_model.onnx
+    "</pre>
+  </div>
+
+  <div class="box ok">
+    <div class="box-title">✓ 期望输出</div>
+    <pre style="background:transparent;padding:0;font-size:11px;color:#aaa">=== 验证运行环境 ===
+aarch64
+
+=== 验证 .so 能被加载 ===
+        libonnxruntime.so.1.17.3 => /app/lib/libonnxruntime.so.1.17.3
+        libstdc++.so.6 => ...
+        ...
+
+=== 执行推理 ===
+加载模型: ./tiny_model.onnx
+模型加载成功
+输入名: input | 输出名: output
+
+=== 推理结果 ===
+输入:  [1.0, 2.0, 3.0, 4.0]
+<span style="color:var(--accent3);font-weight:700">输出:  [5.1, 5.1]</span>
+期望:  [5.1, 5.1]  ← 应与Python结果一致</pre>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title">⚠️ 如果 ldd 报 "not found"</div>
+    <p>说明 .so 没找到。确认 <code>deploy/lib/</code> 里有 libonnxruntime.so.1.17.3，且命令里带了 <code>LD_LIBRARY_PATH=./lib</code>。</p>
+  </div>
+
+  <div class="st">// 6.3 打包为可部署文件</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">WSL2 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre">cd ~/cross-lab
+
+<span class="cm"># 创建启动脚本</span>
+cat > deploy/run.sh <span class="op">&lt;&lt;</span><span class="str">'EOF'</span>
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LD_LIBRARY_PATH="$SCRIPT_DIR/lib" \
+    "$SCRIPT_DIR/infer_arm64" \
+    "$SCRIPT_DIR/tiny_model.onnx"
+EOF
+chmod +x deploy/run.sh
+
+<span class="cm"># 打包成 tar.gz</span>
+tar -czf cross_compile_deploy.tar.gz deploy/
+
+ls -lh cross_compile_deploy.tar.gz
+<span class="cm"># 这个包丢到真实飞腾机器上，解压后执行 bash run.sh 即可</span></pre>
+  </div>
+
+  <div class="st">// 6.4 在真实飞腾/麒麟机器上部署（备忘）</div>
+  <div class="cb">
+    <div class="cb-head"><span class="cb-lang">麒麟/Deepin 飞腾机器 bash</span><button class="copy-btn" onclick="cp(this)">复制</button></div>
+    <pre"><span class="cm"># 解压</span>
+tar -xzf cross_compile_deploy.tar.gz -C /opt/
+
+<span class="cm"># 直接运行，不需要安装任何东西</span>
+bash /opt/deploy/run.sh
+
+<span class="cm"># 期望输出和实验一致：[5.1, 5.1]</span></pre>
+  </div>
+
+  <div class="box ok">
+    <div class="box-title">🎉 实验完成！你现在理解了什么</div>
+    <ul>
+      <li>交叉编译器（aarch64-linux-gnu-g++）把源码编译成 ARM64 机器码</li>
+      <li>链接的 .so 必须是 ARM64 版本，通过 <code>file</code> 命令验证</li>
+      <li>产物在 x86 上无法运行（Exec format error）是正常的，要用 QEMU 或 ARM64 容器验证</li>
+      <li>部署只需带走：可执行文件 + .onnx 模型 + lib/ 目录的 .so</li>
+      <li>C++推理结果和 Python 基准 [[5.1, 5.1]] 一致，说明交叉编译完全正确</li>
+    </ul>
+  </div>
+
+  <div class="st">// 和 Python服务方案的最终对比</div>
+  <table>
+    <tr><th>维度</th><th>交叉编译C++方案（本教程）</th><th>Python服务方案（上一教程）</th></tr>
+    <tr><td>部署依赖</td><td class="tg">只需 .so，无需Python</td><td>需要Python运行时</td></tr>
+    <tr><td>推理延迟</td><td class="tg">最低，无额外开销</td><td>多 HTTP+JSON ~1ms</td></tr>
+    <tr><td>内存管理</td><td class="tr">手动，有泄漏风险</td><td class="tg">Python GC自动管理</td></tr>
+    <tr><td>编译复杂度</td><td class="tr">高，工具链、依赖繁琐</td><td class="tg">无需编译</td></tr>
+    <tr><td>模型更新</td><td>需重新测试部署</td><td class="tg">只换 .onnx 重启</td></tr>
+    <tr><td>适用场景</td><td>硬实时，&lt;5ms，纯C++系统</td><td class="tg">大多数场景</td></tr>
+  </table>
+
+  <ul class="cl">
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">Docker ARM64 容器中运行成功</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">输出 [5.1, 5.1] 与 Python 基准完全一致</span></li>
+    <li onclick="ck(this)"><span class="cbox">✓</span><span class="ct">cross_compile_deploy.tar.gz 打包完成</span></li>
+  </ul>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="go(5)">← 返回</button>
+    <button class="btn btn-c done-btn" id="c6" onclick="done(6)">全部完成 ✓</button>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+const STEPS = [
+  { title: "全局流程理解" },
+  { title: "准备编译环境" },
+  { title: "生成ONNX模型" },
+  { title: "获取ARM64运行时" },
+  { title: "编写C++代码" },
+  { title: "执行交叉编译" },
+  { title: "ARM64环境验证" },
+];
+
+let cur = 0;
+const done_set = new Set();
+
+function buildNav() {
+  const nl = document.getElementById('navlist');
+  STEPS.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'nav-item' + (i === 0 ? ' active' : '');
+    d.id = 'nav' + i;
+    d.onclick = () => go(i);
+    d.innerHTML = `<span class="nnum">${String(i).padStart(2,'0')}</span><span class="ndot"></span><span>${s.title}</span>`;
+    nl.appendChild(d);
+  });
+}
+
+function go(idx) {
+  document.querySelector('.step.active').classList.remove('active');
+  document.getElementById('step-' + idx).classList.add('active');
+  document.querySelector('.nav-item.active').classList.remove('active');
+  const ni = document.getElementById('nav' + idx);
+  ni.classList.add('active');
+  cur = idx;
+  window.scrollTo(0, 0);
+}
+
+function done(idx) {
+  done_set.add(idx);
+  const btn = document.getElementById('c' + idx);
+  if (btn) { btn.classList.add('done-btn'); btn.textContent = '✓ 已完成'; }
+  document.getElementById('nav' + idx).classList.add('done');
+  const total = STEPS.length - 1;
+  const cnt = [...done_set].filter(x => x > 0).length;
+  document.getElementById('pfill').style.width = Math.round(cnt / total * 100) + '%';
+  document.getElementById('ptxt').textContent = cnt + ' / ' + total;
+}
+
+function ck(li) { li.classList.toggle('ck'); }
+
+function cp(btn) {
+  const pre = btn.closest('.cb').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = '已复制!';
+    btn.classList.add('cp');
+    setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('cp'); }, 2000);
+  });
+}
+
+buildNav();
+</script>
+</body>
+</html>
